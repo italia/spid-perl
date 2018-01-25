@@ -61,7 +61,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
 * [ ] AttributeQuery generation (2.2.2.1)
     * [ ] SOAP-over-HTTP binding (client)
 
-### Compliance with SPID regulationsCompliance with [SPID regulations](http://www.agid.gov.it/sites/default/files/circolari/spid-regole_tecniche_v1.pdf) (for Attribute Authorities)
+### Compliance with [SPID regulations](http://www.agid.gov.it/sites/default/files/circolari/spid-regole_tecniche_v1.pdf) (for Attribute Authorities)
 
 * Metadata
     * [ ] parsing of SP XML metadata (1.3.2)
