@@ -86,6 +86,8 @@ sub new_from_xml {
     return $self;
 }
 
+=back
+
 =head2 as_xml( )
 
 Returns the LogoutResponse as XML.

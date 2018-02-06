@@ -361,3 +361,5 @@ sub metadata {
 }
 
 __PACKAGE__->meta->make_immutable;
+
+=for Pod::Coverage BUILD

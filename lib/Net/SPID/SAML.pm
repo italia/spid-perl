@@ -328,7 +328,5 @@ This method accepts a XML payload and parses it as a LogoutRequest, returning a 
 
     my $request = $spid->parse_logoutrequest($xml);
 
-=head 
-
 =cut
 

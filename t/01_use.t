@@ -6,7 +6,7 @@ use warnings;
 use Test::More tests => 2;
 
 BEGIN {
-    use_ok('Net::SPID'):
+    use_ok('Net::SPID');
 }
 
 {
