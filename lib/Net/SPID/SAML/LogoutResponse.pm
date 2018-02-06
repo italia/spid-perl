@@ -38,3 +38,48 @@ sub success {
 }
 
 1;
+
+=head1 SYNOPSIS
+
+    use Net::SPID;
+    
+    # initialize our SPID object
+    my $spid = Net::SPID->new(...);
+    
+    # generate a LogoutResponse
+    my $logoutres = $idp->logoutresponse(
+        status          => 'success',
+        in_response_to  => $logoutreq->id,
+    );
+    my $url = $logoutreq->redirect_url;
+    
+    # parse a LogoutResponse
+    my $logutres = $spid->parse_logoutresponse;
+
+=head1 ABSTRACT
+
+This class represents a LogoutResponse. You may need to parse such a response in case you initiated a logout procedure on behalf of your user and you're getting the result from the Identity Provider, or you may need to generate a logout response in case the user initiated a logout procedure elsewhere and an Identity Provider is requested logout to you.
+
+=head1 CONSTRUCTOR
+
+This class is not supposed to be instantiated directly. You can get one by calling L<Net::SPID::SAML::IdP/logoutresponse> or L<Net::SPID::SAML/parse_logoutresponse>.
+
+=head1 METHODS
+
+=head2 xml
+
+This method returns the raw message in XML format (signed).
+
+    my $xml = $logoutreq->xml;
+
+=head2 redirect_url
+
+This method returns the full URL of the Identity Provider where user should be redirected in order to continue their Single Logout. In SAML words, this implements the HTTP-Redirect binding.
+
+    my $url = $logoutres->redirect_url;
+
+=head2 success
+
+This method parses the status code and returns C<success>, C<partial> or C<0>.
+
+=cut

@@ -18,6 +18,12 @@ has '_authnreq' => (
 
 use Carp;
 
+sub xml {
+    my ($self) = @_;
+    
+    return $self->_authnreq->as_xml;
+}
+
 sub redirect_url {
     my ($self, %args) = @_;
     
@@ -35,3 +41,56 @@ sub redirect_url {
 }
 
 1;
+
+=head1 SYNOPSIS
+
+    use Net::SPID;
+    
+    # initialize our SPID object
+    my $spid = Net::SPID->new(...);
+    
+    # get an IdP
+    my $idp = $spid->get_idp('https://www.prova.it/');
+    
+    # generate an AuthnRequest
+    my $authnreq = $idp->authnrequest(
+        acs_index   => 0,   # index of AssertionConsumerService as per our SP metadata
+        attr_index  => 1,   # index of AttributeConsumingService as per our SP metadata
+        level       => 1,   # SPID level
+    );
+    
+    my $url = $authnreq->redirect_url;
+
+=head1 ABSTRACT
+
+This class represents an AuthnRequest.
+
+=head1 CONSTRUCTOR
+
+This class is not supposed to be instantiated directly. You can craft an AuthnRequest by calling the L<Net::SPID::SAML::IdP/authnrequest> method on a L<Net::SPID::SAML::IdP> object.
+
+=head1 METHODS
+
+=head2 xml
+
+This method returns the raw message in XML format (signed).
+
+    my $xml = $authnreq->xml;
+
+=head2 redirect_url
+
+This method returns the full URL of the Identity Provider where user should be redirected in order to initiate their Single Sign-On. In SAML words, this implements the HTTP-Redirect binding.
+
+    my $url = $authnreq->redirect_url(relaystate => 'foobar');
+
+The following arguments can be supplied:
+
+=over
+
+=item I<relaystate>
+
+(Optional.) An arbitrary payload can be written in this argument, and it will be returned to us along with the Response/Assertion. Please note that since we're passing this in the query string it can't be too long otherwise the URL will be truncated and the request will fail. Also note that this is transmitted in clear-text.
+
+=back
+
+=cut

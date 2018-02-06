@@ -2,6 +2,7 @@ package Net::SPID::SAML::LogoutRequest;
 use Moo;
 
 has '_spid' => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML
+has 'xml'   => (is => 'ro', required => 1);
 
 # Net::SPID::SAML::IdP object
 has '_idp' => (
@@ -33,3 +34,46 @@ sub redirect_url {
 }
 
 1;
+
+=head1 SYNOPSIS
+
+    use Net::SPID;
+    
+    # initialize our SPID object
+    my $spid = Net::SPID->new(...);
+    
+    # get an IdP
+    my $idp = $spid->get_idp('https://www.prova.it/');
+    
+    # generate a LogoutRequest
+    my $logoutreq = $idp->logoutrequest(
+        session => $spid_session,
+    );
+    my $url = $logoutreq->redirect_url;
+    
+    # parse a LogoutRequest
+    my $logutreq = $spid->parse_logoutrequest;
+
+=head1 ABSTRACT
+
+This class represents a LogoutRequest. You may need to generate this request in case you're initiating a logout procedure on behalf of your user, or you may need to parse a logout request in case the user initiated a logout procedure elsewhere and an Identity Provider is requesting logout to you.
+
+=head1 CONSTRUCTOR
+
+This class is not supposed to be instantiated directly. You can get one by calling L<Net::SPID::SAML::IdP/logoutrequest> or L<Net::SPID::SAML/parse_logoutrequest>.
+
+=head1 METHODS
+
+=head2 xml
+
+This method returns the raw message in XML format (signed).
+
+    my $xml = $logoutreq->xml;
+
+=head2 redirect_url
+
+This method returns the full URL of the Identity Provider where user should be redirected in order to initiate their Single Sign-On. In SAML words, this implements the HTTP-Redirect binding.
+
+    my $url = $logoutreq->redirect_url;
+
+=cut
