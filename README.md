@@ -19,7 +19,8 @@ On top of this module, plugins for web frameworks can be developed in order to a
     * [x] parsing of IdP XML metadata (1.2.2.4)
     * [ ] parsing of AA XML metadata (2.2.4)
     * [ ] SP XML metadata generation (1.3.2)
-* [x] AuthnRequest generation (1.2.2.1)
+* AuthnRequest generation (1.2.2.1)
+    * [x] generation of AuthnRequest XML
     * [x] HTTP-Redirect binding
     * [ ] HTTP-POST binding
     * [x] AssertionConsumerServiceURL customization
@@ -28,7 +29,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
     * [x] AuthnContextClassRef (SPID level) customization
     * [x] RequestedAuthnContext/@Comparison customization
     * [ ] RelayState customization (1.2.2)
-* Response/Assertion parsing - both SSO and attribute query
+* Response/Assertion parsing
     * [x] verification of Response/Signature value (if any)
     * [ ] verification of Response/Signature certificate (if any) against IdP/AA metadata
     * [ ] verification of Assertion/Signature value
@@ -43,37 +44,54 @@ On top of this module, plugins for web frameworks can be developed in order to a
     * [x] verification of Audience
     * [ ] parsing of Response with no Assertion (authentication/query failure)
     * [ ] parsing of failure StatusCode (Requester/Responder)
-* [x] Response/Assertion parsing - for SSO (1.2.1, 1.2.2.2, 1.3.1)
-    * [x] parsing of NameID
-    * [x] parsing of AuthnContextClassRef (SPID level)
-    * [x] parsing of attributes
-* [ ] Response/Assertion parsing - for attribute query (2.2.2.2, 2.3.1)
-    * [ ] parsing of attributes
-* [x] LogoutRequest generation (for SP-initiated logout)
+    * for SSO (1.2.1, 1.2.2.2, 1.3.1)
+        * [x] parsing of NameID
+        * [x] parsing of AuthnContextClassRef (SPID level)
+        * [x] parsing of attributes
+    * for attribute query (2.2.2.2, 2.3.1)
+        * [ ] parsing of attributes
+* LogoutRequest generation (for SP-initiated logout)
+    * [x] generation of LogoutRequest XML
     * [x] HTTP-Redirect binding
     * [ ] HTTP-POST binding
-* [x] LogoutResponse parsing (for SP-initiated logout)
-    * [x] HTTP-POST binding (FIXME?)
-    * [x] PartialLogout parsing
-* [x] LogoutResponse generation (for third-party-initiated logout)
-    * [x] HTTP-POST binding (FIXME?)
+* LogoutResponse parsing (for SP-initiated logout)
+    * [x] parsing of LogoutResponse XML
+    * [x] verification of Response/Signature value (if any)
+    * [ ] verification of Response/Signature certificate (if any) against IdP metadata
+    * [x] verification of Issuer
+    * [ ] verification of Destination
+    * [x] PartialLogout detection
+* LogoutRequest parsing (for third-party-initiated logout)
+    * [x] parsing of LogoutRequest XML
+    * [x] verification of Response/Signature value (if any)
+    * [ ] verification of Response/Signature certificate (if any) against IdP metadata
+    * [ ] verification of Issuer
+    * [ ] verification of Destination
+    * [x] parsing of NameID
+* LogoutResponse generation (for third-party-initiated logout)
+    * [x] generation of LogoutResponse XML
+    * [ ] HTTP-Redirect binding
+    * [x] HTTP-POST binding
     * [x] PartialLogout customization
-* [ ] AttributeQuery generation (2.2.2.1)
-    * [ ] SOAP-over-HTTP binding (client)
+* AttributeQuery generation (2.2.2.1)
+    * [ ] generation of AttributeQuery XML
+    * [ ] SOAP binding (client)
 
 ### Compliance with [SPID regulations](http://www.agid.gov.it/sites/default/files/circolari/spid-regole_tecniche_v1.pdf) (for Attribute Authorities)
 
 * Metadata
     * [ ] parsing of SP XML metadata (1.3.2)
     * [ ] AA XML metadata generation (2.2.4)
-* [ ] AttributeQuery parsing (2.2.2.1)
+* AttributeQuery parsing (2.2.2.1)
+    * [ ] parsing of AttributeQuery XML
     * [ ] verification of Signature value
     * [ ] verification of Signature certificate against SP metadata
     * [ ] verification of Issuer
     * [ ] verification of Destination
     * [ ] parsing of Subject/NameID
     * [ ] parsing of requested attributes
-* [ ] Response/Assertion generation (2.2.2.2)
+* Response/Assertion generation (2.2.2.2)
+    * [ ] generation of Response/Assertion XML
     * [ ] Signature
 
 ### More features
