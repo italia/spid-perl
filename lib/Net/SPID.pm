@@ -56,7 +56,7 @@ This Perl module is aimed at implementing SPID Service Providers and Attribute A
 This module is not bound to any particular web framework, so you'll have to do some plumbing yourself in order to route protocol messages over HTTP (see the F<example/> directory for a full working example).
 On top of this module, plugins for web frameworks can be developed in order to achieve even more API abstraction.
 
-See L<README.md> for a full feature list with details about SPID compliance.
+See F<README.md> for a full feature list with details about SPID compliance.
 
 =head1 CONSTRUCTOR
 

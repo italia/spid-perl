@@ -249,7 +249,7 @@ The preferred way to instantiate this class is to call C<Net::SPID->new(protocol
 
 =item I<sp_cert_file>
 
-(Required.) The absolute of relative file path to our certificate file.
+(Required.) The absolute or relative file path to our certificate file.
 
 =item I<sp_acs_url>
 

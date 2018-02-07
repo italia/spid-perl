@@ -3,7 +3,7 @@ Perl module for SPID authentication
 
 [![Join the #spid-perl channel](https://img.shields.io/badge/Slack%20channel-%23spid--perl-blue.svg?logo=slack)](https://developersitalia.slack.com/messages/C7ESTMQDQ)
 [![Get invited](https://slack.developers.italia.it/badge.svg)](https://slack.developers.italia.it/)
-[![SPID on forum.italia.it](https://img.shields.io/badge/Forum-SPID-blue.svg)](https://forum.italia.it/c/spid)
+[![SPID on forum.italia.it](https://img.shields.io/badge/Forum-SPID-blue.svg)](https://forum.italia.it/c/spid) [![Build Status](https://travis-ci.org/italia/spid-perl.svg?branch=master)](https://travis-ci.org/italia/spid-perl) [![MetaCPAN Release](https://badge.fury.io/pl/Net-SPID.svg)](https://metacpan.org/release/Net-SPID)
 
 This Perl module is aimed at implementing SPID Service Providers and Attribute Authorities. [SPID](https://www.spid.gov.it/) is the Italian digital identity system, which enables citizens to access all public services with single set of credentials. This module provides a layer of abstraction over the SAML protocol by exposing just the subset required in order to implement SPID authentication in a web application. In addition, it will be able to generate the HTML code of the SPID login button and enable developers to implement an Attribute Authority.
 
@@ -119,6 +119,10 @@ Or, if you want the latest version from git, use:
 ```
 cpanm https://github.com/italia/spid-perl/archive/master.tar.gz
 ```
+
+## Documentation
+
+See the POD documentation in [Net::SPID](lib/Net/SPID.pm) and the other .pm files or browse it on [MetaCPAN](https://metacpan.org/release/Net-SPID).
 
 ## See also
 
