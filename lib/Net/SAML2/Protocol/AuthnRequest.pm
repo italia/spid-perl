@@ -72,6 +72,7 @@ Returns the AuthnRequest as XML.
 
 sub as_xml {
     my ($self) = @_;
+    
     my $saml = 'urn:oasis:names:tc:SAML:2.0:assertion';
     my $samlp = 'urn:oasis:names:tc:SAML:2.0:protocol';
     my $x = XML::Writer->new( 

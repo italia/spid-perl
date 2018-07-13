@@ -1,40 +1,79 @@
 package Net::SPID::SAML::AuthnRequest;
 use Moo;
 
-has '_spid' => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML
+extends 'Net::SPID::SAML::ProtocolMessage';
 
-# Net::SPID::SAML::IdP object
-has '_idp' => (
-    is          => 'ro',
-    required    => 1,
-);
-
-# Net::SAML2::Protocol::AuthnRequest object
-has '_authnreq' => (
-    is          => 'ro',
-    required    => 1,
-    handles     => [qw(id)],
-);
+has 'acs_url'       => (is => 'rw', required => 0);
+has 'acs_index'     => (is => 'rw', required => 0);
+has 'attr_index'    => (is => 'rw', required => 0);
+has 'level'         => (is => 'rw', required => 0, default => sub { 1 });
+has 'comparison'    => (is => 'rw', required => 0, default => sub { 'minimum' });
 
 use Carp;
+
+sub BUILD {
+    my ($self) = @_;
+    
+    if (!$self->acs_url || !$self->_spid->sp_acs_url) {
+        croak "acs_url or acs_index are required\n";
+    }
+}
 
 sub xml {
     my ($self) = @_;
     
-    return $self->_authnreq->as_xml;
+    my ($x, $saml, $samlp) = $self->SUPER::xml;
+
+    my $req_attrs = {
+        ID              => $self->ID,
+        IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
+        Version         => '2.0',
+        Destination     => $self->_idp->sso_url($self->ProtocolBinding),
+        ProtocolBinding => $self->ProtocolBinding,
+        ForceAuthn      => ($self->level > 1) ? 'true' : 'false',
+    };
+    if (my $acs_url = $self->acs_url // $self->_spid->sp_acs_url) {
+        $req_attrs->{AssertionConsumerServiceURL} = $acs_url;
+    }
+    if (my $acs_index = $self->acs_index // $self->_spid->sp_acs_index) {
+        $req_attrs->{AssertionConsumerServiceIndex} = $acs_index;
+    }
+    if (my $attr_index = $self->attr_index // $self->_spid->sp_attr_index) {
+        $req_attrs->{AttributeConsumingServiceIndex} = $attr_index;
+    }
+    $x->startTag([$samlp, 'AuthnRequest'], %$req_attrs);
+    
+    $x->dataElement([$saml, 'Issuer'], $self->_spid->sp_entityid,
+        Format          => 'urn:oasis:names:tc:SAML:2.0:nameid-format:entity',
+        NameQualifier   => $self->_spid->sp_entityid,
+    );
+    
+    $x->dataElement([$samlp, 'NameIDPolicy'], undef, 
+        Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient');
+    
+    $x->dataElement([$saml, 'AuthnContextClassRef'], 'https://www.spid.gov.it/SpidL' . $self->level);
+    
+    $x->endTag(); #AuthnRequest
+    $x->end();
+    
+    my $xml = $x->to_string;
+    
+    # TODO: if we're using HTTP-POST, sign this document
+    
+    return $xml;
 }
 
 sub redirect_url {
     my ($self, %args) = @_;
     
-    my $xml = $self->_authnreq->as_xml;
+    my $xml = $self->xml;
     print STDERR $xml, "\n";
     
-    # Check that this IdP offers a HTTP-Redirect SSO binding
-    # (current SPID specs do not enforce its presence, and an IdP
-    # might only have a HTTP-POST binding).
-    croak sprintf "IdP '%s' does not have a HTTP-Redirect SSO binding", $self->_idp->entityid,
-        if !$self->_idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
+    # Check that this IdP offers a suitable SSO binding
+    # (current SPID specs do not enforce that all bindings are made available).
+    croak sprintf "IdP '%s' does not have a %s SSO binding",
+        $self->_idp->entityid, $self->ProtocolBinding
+        if !$self->_idp->sso_url($self->ProtocolBinding);
     
     my $redirect = $self->_spid->_sp->sso_redirect_binding($self->_idp, 'SAMLRequest');
     return $redirect->sign($xml, $args{relaystate});
@@ -89,7 +128,7 @@ The following arguments can be supplied:
 
 =item I<relaystate>
 
-(Optional.) An arbitrary payload can be written in this argument, and it will be returned to us along with the Response/Assertion. Please note that since we're passing this in the query string it can't be too long otherwise the URL will be truncated and the request will fail. Also note that this is transmitted in clear-text.
+(Optional.) An arbitrary payload can be written in this argument, and it will be returned to us along with the Response/Assertion. Please note that since we're passing this in the query string it can't be too long otherwise the URL will be truncated and the request will fail. Also note that this is transmitted in clear-text and that you are responsible for making sure the value is coupled with this AuthnRequest either cryptographycally or by using a lookup table on your side.
 
 =back
 
