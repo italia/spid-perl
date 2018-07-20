@@ -1,7 +1,7 @@
 package Net::SPID::SAML::AuthnRequest;
 use Moo;
 
-extends 'Net::SPID::SAML::ProtocolMessage';
+extends 'Net::SPID::SAML::ProtocolMessage::Outgoing';
 
 has 'acs_url'       => (is => 'rw', required => 0);
 has 'acs_index'     => (is => 'rw', required => 0);
@@ -14,7 +14,8 @@ use Carp;
 sub BUILD {
     my ($self) = @_;
     
-    if (!$self->acs_url || !$self->_spid->sp_acs_url) {
+    if (!grep defined, $self->acs_url, $self->_spid->sp_acs_url,
+        $self->acs_index, $self->_spid->sp_acs_index) {
         croak "acs_url or acs_index are required\n";
     }
 }
@@ -28,17 +29,17 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->sso_url($self->ProtocolBinding),
-        ProtocolBinding => $self->ProtocolBinding,
+        Destination     => $self->_idp->sso_url($self->binding),
         ForceAuthn      => ($self->level > 1) ? 'true' : 'false',
     };
-    if (my $acs_url = $self->acs_url // $self->_spid->sp_acs_url) {
+    if (defined (my $acs_url = $self->acs_url // $self->_spid->sp_acs_url)) {
         $req_attrs->{AssertionConsumerServiceURL} = $acs_url;
+        $req_attrs->{ProtocolBinding} = 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST';
     }
-    if (my $acs_index = $self->acs_index // $self->_spid->sp_acs_index) {
+    if (defined (my $acs_index = $self->acs_index // $self->_spid->sp_acs_index)) {
         $req_attrs->{AssertionConsumerServiceIndex} = $acs_index;
     }
-    if (my $attr_index = $self->attr_index // $self->_spid->sp_attr_index) {
+    if (defined (my $attr_index = $self->attr_index // $self->_spid->sp_attr_index)) {
         $req_attrs->{AttributeConsumingServiceIndex} = $attr_index;
     }
     $x->startTag([$samlp, 'AuthnRequest'], %$req_attrs);
@@ -51,7 +52,9 @@ sub xml {
     $x->dataElement([$samlp, 'NameIDPolicy'], undef, 
         Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient');
     
+    $x->startTag([$samlp, 'RequestedAuthnContext'], Comparison => 'exact');
     $x->dataElement([$saml, 'AuthnContextClassRef'], 'https://www.spid.gov.it/SpidL' . $self->level);
+    $x->endTag();
     
     $x->endTag(); #AuthnRequest
     $x->end();
@@ -72,8 +75,8 @@ sub redirect_url {
     # Check that this IdP offers a suitable SSO binding
     # (current SPID specs do not enforce that all bindings are made available).
     croak sprintf "IdP '%s' does not have a %s SSO binding",
-        $self->_idp->entityid, $self->ProtocolBinding
-        if !$self->_idp->sso_url($self->ProtocolBinding);
+        $self->_idp->entityid, $self->binding
+        if !$self->_idp->sso_url($self->binding);
     
     my $redirect = $self->_spid->_sp->sso_redirect_binding($self->_idp, 'SAMLRequest');
     return $redirect->sign($xml, $args{relaystate});

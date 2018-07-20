@@ -30,14 +30,15 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |`RequestedAuthnContext/@Comparison` customization|✓|
 |`RelayState` customization (1.2.2)| |
 |**Response/Assertion parsing**||
-|verification of `Response/Signature` value (if any)|✓|
-|verification of `Response/Signature` certificate (if any) against IdP/AA metadata| |
-|verification of `Assertion/Signature` value| |
-|verification of `Assertion/Signature` certificate against IdP/AA metadata| |
+|verification of `Signature` value (if any)|✓|
+|verification of `Signature` certificate (if any) against IdP/AA metadata|✓|
+|verification of `Assertion/Signature` value|✓|
+|verification of `Assertion/Signature` certificate against IdP/AA metadata|✓|
 |verification of `SubjectConfirmationData/@Recipient`| |
-|verification of `SubjectConfirmationData/@NotOnOrAfter`| |
+|verification of `SubjectConfirmationData/@NotOnOrAfter`|✓|
 |verification of `SubjectConfirmationData/@InResponseTo`|✓|
 |verification of `Issuer`|✓|
+|verification of `Assertion/Issuer`|✓|
 |verification of `Destination`| |
 |verification of `Conditions/@NotBefore`|✓|
 |verification of `Conditions/@NotOnOrAfter`|✓|

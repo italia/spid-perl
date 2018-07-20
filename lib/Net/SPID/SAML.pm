@@ -112,29 +112,13 @@ sub get_idp {
 sub parse_assertion {
     my ($self, $payload, $in_response_to) = @_;
     
-    my $xml = decode_base64($payload);
-    print STDERR $xml;
-    
-    # verify signature and CA
-    my $post = Net::SAML2::Binding::POST->new(
-        cacert => $self->cacert_file,
-    );
-    $post->handle_response($payload)
-        or croak "Failed to parse SAML LogoutResponse";
-    
-    # parse assertion
-    my $assertion = Net::SAML2::Protocol::Assertion->new_from_xml(
-        xml => $xml,
-    );
-    
     my $a = Net::SPID::SAML::Assertion->new(
         _spid       => $self,
-        _assertion  => $assertion,
-        xml         => $xml,
+        base64      => $payload,
     );
     
-    # Validate audience and timestamps. This will throw an exception in case of failure.
-    $a->validate($in_response_to);
+    # Validate response. This will throw an exception in case of failure.
+    $a->validate(in_response_to => $in_response_to);
     
     return $a;
 }

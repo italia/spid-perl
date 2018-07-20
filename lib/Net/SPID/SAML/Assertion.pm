@@ -1,84 +1,130 @@
 package Net::SPID::SAML::Assertion;
 use Moo;
 
-has '_spid'         => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML
-has '_assertion'    => (is => 'ro', required => 1);                 # Net::SAML2::Protocol::Assertion
-has 'xml'           => (is => 'ro', required => 1);                 # original unparsed XML
+extends 'Net::SPID::SAML::ProtocolMessage::Incoming';
+
+has 'NotBefore' => (is => 'lazy', builder => sub {
+    DateTime::Format::XSD->parse_datetime
+        ($_[0]->xpath->findvalue('//saml:Conditions/@NotBefore')->value)
+});
+
+has 'NotOnOrAfter' => (is => 'lazy', builder => sub {
+    DateTime::Format::XSD->parse_datetime
+        ($_[0]->xpath->findvalue('//saml:Conditions/@NotOnOrAfter')->value)
+});
+
+has 'SubjectConfirmationData_NotOnOrAfter' => (is => 'lazy', builder => sub {
+    DateTime::Format::XSD->parse_datetime
+        ($_[0]->xpath->findvalue('//saml:SubjectConfirmationData/@NotOnOrAfter')->value)
+});
+
+has 'NameID' => (is => 'lazy', builder => sub {
+    $_[0]->xpath->findvalue('//saml:Subject/saml:NameID')->value
+});
+
+has 'SessionIndex' => (is => 'lazy', builder => sub {
+    $_[0]->xpath->findvalue('//saml:AuthnStatement/@SessionIndex')->value
+});
+
+has 'spid_level' => (is => 'lazy', builder => sub {
+    my $classref = $_[0]->xpath->findvalue('//saml:AuthnContextClassRef')->value
+        or return undef;
+    $classref =~ /SpidL(\d)$/ or return undef;
+    return $1;
+});
+
+has 'attributes' => (is => 'lazy', builder => sub {
+    {
+        map { $_->getAttribute('Name') => $_->findnodes("*[local-name()='AttributeValue']")->[0]->string_value }
+            $_[0]->xpath->findnodes("//saml:Assertion/saml:AttributeStatement/saml:Attribute"),
+    }
+});
 
 use Carp;
 use DateTime;
+use DateTime::Format::XSD;
+use Mojo::XMLSig;
 
 sub validate {
-    my ($self, $in_response_to) = @_;
+    my ($self, %args) = @_;
     
-    croak sprintf "Invalid Audience: '%s' (expected: '%s')",
-        $self->_assertion->audience, $self->_spid->sp_entityid
-        if !$self->valid_audience;
+    $self->SUPER::validate(%args) or return 0;
     
-    if (defined $in_response_to) {
-        croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
-            $self->_assertion->in_response_to, $in_response_to
-            if defined $in_response_to && !$self->valid_in_response_to($in_response_to);
+    my $xpath = $self->xpath;
+    
+    {
+        my $response_issuer  = $xpath->findvalue('/samlp:Response/saml:Issuer')->value;
+        my $assertion_issuer = $xpath->findvalue('//saml:Assertion/saml:Issuer')->value;
+    
+        croak "Response/Issuer ($response_issuer) does not match Assertion/Issuer ($assertion_issuer)"
+            if $response_issuer ne $assertion_issuer;
     }
     
-    croak sprintf "Invalid NotBefore: '%s' (now: '%s')",
-        $self->_assertion->not_before, DateTime->now->iso8601
-        if !$self->valid_not_before;
+    # this validates all the signatures in the given XML, and requires that at least one exists
+    Mojo::XMLSig::verify($self->xml, $self->_idp->cert->pubkey)
+        or croak "Signature verification failed";
     
-    croak sprintf "Invalid NotAfter: '%s' (now: '%s')",
-        $self->_assertion->not_after, DateTime->now->iso8601
-        if !$self->valid_not_after;
+    # SPID regulations require that Assertion is signed, while Response can be not signed
+    croak "Response/Assertion is not signed"
+        if $xpath->findnodes('//saml:Assertion/dsig:Signature')->size == 0;
     
-    return 1;
-}
-
-sub valid_audience {
-    my ($self) = @_;
+    {
+        my $audience = $xpath->findvalue('//saml:Conditions/saml:AudienceRestriction/saml:Audience')->value;
+        croak sprintf "Invalid Audience: '%s' (expected: '%s')",
+            $audience, $self->_spid->sp_entityid
+            if $audience ne $self->_spid->sp_entityid;
+    }
     
-    return $self->_assertion->audience eq $self->_spid->sp_entityid;
-}
-
-sub valid_in_response_to {
-    my ($self, $in_response_to) = @_;
+    if (defined $args{in_response_to}) {
+        my $in_response_to = $xpath->findvalue('//saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@InResponseTo')->value;
+        croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
+            $in_response_to, $args{in_response_to}
+            if $in_response_to ne $args{in_response_to};
+    }
     
-    return $in_response_to eq $self->_assertion->in_response_to;
-}
-
-sub valid_not_before {
-    my ($self) = @_;
+    my $now = DateTime->now;
     
     # exact match is ok
-    return DateTime->compare(DateTime->now, $self->_assertion->not_before) > -1;
-}
-
-sub valid_not_after {
-    my ($self) = @_;
+    croak sprintf "Invalid NotBefore: '%s' (now: '%s')",
+        $self->NotBefore->iso8601, $now->iso8601
+        if DateTime->compare($now, $self->NotBefore) < 0;
     
     # exact match is *not* ok
-    return DateTime->compare($self->_assertion->not_after, DateTime->now) > 0;
-}
-
-sub spid_level {
-    my ($self) = @_;
+    croak sprintf "Invalid NotOnOrAfter: '%s' (now: '%s')",
+        $self->NotOnOrAfter->iso8601, $now->iso8601
+        if DateTime->compare($now, $self->NotOnOrAfter) > -1;
     
-    if ($self->_assertion->AuthnContextClassRef->[0]) {
-        $self->_assertion->AuthnContextClassRef->[0] =~ /SpidL(\d)$/;
-        return $1;
+    # exact match is *not* ok
+    croak sprintf "Invalid SubjectConfirmationData/NotOnOrAfter: '%s' (now: '%s')",
+        $self->SubjectConfirmationData_NotOnOrAfter->iso8601, $now->iso8601
+        if DateTime->compare($now, $self->SubjectConfirmationData_NotOnOrAfter) > -1;
+    
+    # TODO: make this check required (and update the checklist in README)
+    if (exists $args{acs_url}) {
+        my $destination  = $xpath->findvalue('//samlp:Response/@Destination')->value;
+        croak "Invalid Destination: '%s' (expected: '%s')",
+            $destination, $args{acs_url},
+            if $destination ne $args{acs_url};
+        
+        my $recipient  = $xpath->findvalue('//saml:SubjectConfirmationData/@Recipient')->value;
+        croak "Invalid SubjectConfirmationData/\@Recipient: '%s' (expected: '%s')",
+            $recipient, $args{acs_url},
+            if $recipient ne $args{acs_url};
     }
     
-    return undef;
+    return 1;
 }
 
 sub spid_session {
     my ($self) = @_;
     
     return Net::SPID::Session->new(
-        idp_id          => $self->_assertion->issuer->as_string,
-        nameid          => $self->_assertion->nameid,
-        session         => $self->_assertion->session,
-        attributes      => $self->_assertion->attributes,
+        idp_id          => $self->Issuer,
+        nameid          => $self->NameID,
+        session         => $self->SessionIndex,
+        attributes      => $self->attributes,
         level           => $self->spid_level,
-        xml             => $self->xml,
+        assertion_xml   => $self->xml,
     );
 }
 

@@ -5,6 +5,7 @@ extends 'Net::SAML2::IdP';
 has '_spid' => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML
 
 use Carp;
+use Crypt::OpenSSL::X509;
 
 sub authnrequest {
     my ($self, %args) = @_;
@@ -52,6 +53,18 @@ sub logoutresponse {
         _spid       => $self->_spid,
         _idp        => $self,
         _logoutres  => $res,
+    );
+}
+
+sub cert {
+    my ($self) = @_;
+    
+    # legacy, until we ditch Net::SAML2
+    return $self->SUPER::cert('signing') if caller =~ /^Net::SAML2/;
+    
+    return Crypt::OpenSSL::X509->new_from_string(
+        $self->SUPER::cert('signing'),
+        Crypt::OpenSSL::X509::FORMAT_PEM,
     );
 }
 
@@ -155,5 +168,9 @@ The following arguments can be supplied to C<logoutresponse()>:
 This can be either C<success>, C<partial>, C<requester> or C<responder> according to the SAML specs.
 
 =back
+
+=head2 cert
+
+Returns the signing certificate for this Identity Provider as a L<Crypt::OpenSSL::X509> object.
 
 =cut
