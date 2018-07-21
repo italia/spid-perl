@@ -1,0 +1,104 @@
+package Net::SPID::SAML::LogoutRequest::Outgoing;
+use Moo;
+
+extends 'Net::SPID::SAML::ProtocolMessage::Outgoing';
+
+has 'session'       => (is => 'ro', required => 1);
+has 'binding'       => (is => 'rw', required => 1,
+    default => sub { 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect' });
+
+use Carp;
+
+sub xml {
+    my ($self) = @_;
+    
+    my ($x, $saml, $samlp) = $self->SUPER::xml;
+
+    my $req_attrs = {
+        ID              => $self->ID,
+        IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
+        Version         => '2.0',
+        Destination     => $self->_idp->sso_url($self->binding),
+    };
+    $x->startTag([$samlp, 'LogoutRequest'], %$req_attrs);
+    
+    $x->dataElement([$saml, 'Issuer'], $self->_spid->sp_entityid,
+        Format          => 'urn:oasis:names:tc:SAML:2.0:nameid-format:entity',
+        NameQualifier   => $self->_spid->sp_entityid,
+    );
+    
+    $x->dataElement([$saml, 'NameID'], $self->session->nameid, 
+        Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient',
+        NameQualifier => $self->_idp->entityid);
+    
+    $x->dataElement([$samlp, 'SessionIndex'], $self->session->session);
+    
+    $x->endTag(); #LogoutRequest
+    $x->end();
+    
+    my $xml = $x->to_string;
+    
+    # TODO: if we're using HTTP-POST, sign this document
+    
+    return $xml;
+}
+
+sub redirect_url {
+    my ($self, %args) = @_;
+    
+    my $xml = $self->xml;
+    print STDERR $xml, "\n";
+    
+    # Check that this IdP offers a suitable SLO binding
+    # (current SPID specs do not enforce that all bindings are made available).
+    croak sprintf "IdP '%s' does not have a %s SLO binding",
+        $self->_idp->entityid, $self->binding
+        if !$self->_idp->slo_url($self->binding);
+    
+    my $redirect = $self->_spid->_sp->slo_redirect_binding($self->_idp, 'SAMLRequest');
+    return $redirect->sign($xml);
+}
+
+1;
+
+=head1 SYNOPSIS
+
+    use Net::SPID;
+    
+    # initialize our SPID object
+    my $spid = Net::SPID->new(...);
+    
+    # get an IdP
+    my $idp = $spid->get_idp($spid_session->idp_id);
+    
+    # generate a LogoutRequest
+    my $logoutreq = $idp->logoutrequest(
+        session => $spid_session,
+    );
+    my $url = $logoutreq->redirect_url;
+
+=head1 ABSTRACT
+
+This class represents an outgoing LogoutRequest. You can use it to generate such a request in case you're initiating a logout procedure on behalf of your user.
+
+=head1 CONSTRUCTOR
+
+This class is not supposed to be instantiated directly. You can craft a LogoutRequest by calling the L<Net::SPID::SAML::IdP/logoutrequest> method on a L<Net::SPID::SAML::IdP> object.
+
+=head1 METHODS
+
+=head2 xml
+
+This method generates the message in XML format (signed, if using the HTTP-POST binding).
+
+    my $xml = $logoutreq->xml;
+
+=head2 redirect_url
+
+This method returns the full URL of the Identity Provider where user should be redirected in order to initiate their Single Logout. In SAML words, this implements the HTTP-Redirect binding.
+
+    my $url = $logoutreq->redirect_url;
+
+=cut
+
+=for Pod::Coverage BUILD

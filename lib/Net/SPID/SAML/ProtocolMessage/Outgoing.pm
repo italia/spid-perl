@@ -6,8 +6,6 @@ extends 'Net::SPID::SAML::ProtocolMessage';
 has '_idp'              => (is => 'ro', required => 1); # Net::SPID::SAML::IdP
 has 'ID'                => (is => 'lazy');
 has 'IssueInstant'      => (is => 'lazy');
-has 'binding'           => (is => 'rw', required => 1,
-    default => sub { 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect' });
 
 use Crypt::OpenSSL::Random;
 use DateTime;

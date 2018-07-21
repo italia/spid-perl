@@ -7,7 +7,8 @@ use Net::SAML2;
 use Net::SPID::SAML::Assertion;
 use Net::SPID::SAML::AuthnRequest;
 use Net::SPID::SAML::IdP;
-use Net::SPID::SAML::LogoutRequest;
+use Net::SPID::SAML::LogoutRequest::Incoming;
+use Net::SPID::SAML::LogoutRequest::Outgoing;
 use Net::SPID::SAML::LogoutResponse;
 use URI::Escape qw(uri_escape);
 
@@ -170,7 +171,7 @@ sub parse_logoutrequest {
         xml => $xml,
     );
     
-    return Net::SPID::SAML::LogoutRequest->new(
+    return Net::SPID::SAML::LogoutRequest::Incoming->new(
         _spid       => $self,
         _logoutreq  => $request,
         xml         => $xml,

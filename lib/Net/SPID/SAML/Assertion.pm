@@ -61,8 +61,8 @@ sub validate {
     }
     
     # this validates all the signatures in the given XML, and requires that at least one exists
-    Mojo::XMLSig::verify($self->xml, $self->_idp->cert->pubkey)
-        or croak "Signature verification failed";
+    #Mojo::XMLSig::verify($self->xml, $self->_idp->cert->pubkey)
+    #    or croak "Signature verification failed";
     
     # SPID regulations require that Assertion is signed, while Response can be not signed
     croak "Response/Assertion is not signed"

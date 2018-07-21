@@ -20,17 +20,10 @@ sub authnrequest {
 sub logoutrequest {
     my ($self, %args) = @_;
     
-    my $req = $self->_spid->_sp->logout_request(
-        $self->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'),
-        $args{session}->nameid,
-        $self->format,  # always urn:oasis:names:tc:SAML:2.0:nameid-format:transient
-        $args{session}->session,
-    );
-    
-    return Net::SPID::SAML::LogoutRequest->new(
+    return Net::SPID::SAML::LogoutRequest::Outgoing->new(
         _spid       => $self->_spid,
         _idp        => $self,
-        _logoutreq  => $req,
+        %args,
     );
 }
 

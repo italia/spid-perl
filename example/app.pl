@@ -111,12 +111,12 @@ get '/logout' => sub {
     
     # Craft the LogoutRequest.
     my $spid_session = session 'spid_session';
-    my $idp = $spid->get_idp($spid_session->issuer);
+    my $idp = $spid->get_idp($spid_session->idp_id);
     my $logoutreq = $idp->logoutrequest(session => $spid_session);
     
     # Save the ID of the LogoutRequest so that we can check it in the response
     # in order to prevent forgery.
-    session 'spid_logoutreq_id' => $logoutreq->id;
+    session 'spid_logoutreq_id' => $logoutreq->ID;
     
     # Redirect user to the Identity Provider for logout.
     redirect $logoutreq->redirect_url, 302;

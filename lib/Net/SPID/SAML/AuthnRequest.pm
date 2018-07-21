@@ -8,6 +8,8 @@ has 'acs_index'     => (is => 'rw', required => 0);
 has 'attr_index'    => (is => 'rw', required => 0);
 has 'level'         => (is => 'rw', required => 0, default => sub { 1 });
 has 'comparison'    => (is => 'rw', required => 0, default => sub { 'minimum' });
+has 'binding'       => (is => 'rw', required => 1,
+    default => sub { 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect' });
 
 use Carp;
 
@@ -115,7 +117,7 @@ This class is not supposed to be instantiated directly. You can craft an AuthnRe
 
 =head2 xml
 
-This method returns the raw message in XML format (signed).
+This method generates the message in XML format (signed, if using the HTTP-POST binding).
 
     my $xml = $authnreq->xml;
 
