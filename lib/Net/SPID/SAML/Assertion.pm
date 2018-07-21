@@ -183,6 +183,8 @@ On success it returns a true value. On failure it will throw an exception.
 
 The following arguments are expected:
 
+=over
+
 =item I<in_response_to>
 
 This must be the ID of the AuthnRequest we sent, which you should store in the user's session in order to supply it to this method. It will be used for checking that the I<InResponseTo> field of the assertion matches our request.
