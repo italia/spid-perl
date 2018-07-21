@@ -45,3 +45,5 @@ sub xml {
 }
 
 1;
+
+=for Pod::Coverage *EVERYTHING*

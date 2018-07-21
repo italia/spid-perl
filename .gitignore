@@ -34,3 +34,5 @@ inc/
 /MANIFEST.bak
 /pm_to_blib
 /*.zip
+
+/example/idp_metadata/*.xml

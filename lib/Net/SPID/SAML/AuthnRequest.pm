@@ -52,7 +52,7 @@ sub xml {
     $x->dataElement([$samlp, 'NameIDPolicy'], undef, 
         Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient');
     
-    $x->startTag([$samlp, 'RequestedAuthnContext'], Comparison => 'exact');
+    $x->startTag([$samlp, 'RequestedAuthnContext'], Comparison => $self->comparison);
     $x->dataElement([$saml, 'AuthnContextClassRef'], 'https://www.spid.gov.it/SpidL' . $self->level);
     $x->endTag();
     
@@ -105,7 +105,7 @@ sub redirect_url {
 
 =head1 ABSTRACT
 
-This class represents an AuthnRequest.
+This class represents an outgoing AuthnRequest.
 
 =head1 CONSTRUCTOR
 
@@ -136,3 +136,5 @@ The following arguments can be supplied:
 =back
 
 =cut
+
+=for Pod::Coverage BUILD

@@ -28,7 +28,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |`AttributeConsumingServiceIndex` customization|✓|
 |`AuthnContextClassRef` (SPID level) customization|✓|
 |`RequestedAuthnContext/@Comparison` customization|✓|
-|`RelayState` customization (1.2.2)| |
+|`RelayState` customization (1.2.2)|✓|
 |**Response/Assertion parsing**||
 |verification of `Signature` value (if any)|✓|
 |verification of `Signature` certificate (if any) against IdP/AA metadata|✓|

@@ -49,7 +49,7 @@ get '/spid-login' => sub {
     
     # Save the ID of the Authnreq so that we can check it in the response
     # in order to prevent forgery.
-    session 'spid_authnreq_id' => $authnreq->id;
+    session 'spid_authnreq_id' => $authnreq->ID;
     
     # Redirect user to the IdP using its HTTP-Redirect binding.
     redirect $authnreq->redirect_url, 302;

@@ -153,7 +153,7 @@ sub spid_session {
 
 =head1 ABSTRACT
 
-This class represents a SPID Response/Assertion message. We get such messages either after an AuthnRequest (Single Sign-On) or after an AttributeQuery.
+This class represents an incoming SPID Response/Assertion message. We get such messages either after an AuthnRequest (Single Sign-On) or after an AttributeQuery.
 
 =head1 CONSTRUCTOR
 
@@ -174,35 +174,24 @@ This method performs validation by calling all of the C<valid_*> methods describ
 On success it returns a true value. On failure it will throw an exception.
 
     eval {
-        $assertion->validate($request_id);
+        $assertion->validate(
+            in_response_to  => $authnrequest_id,
+            acs_url         => $acs_url,
+        );
     };
     die "Invalid assertion: $@" if $@;
 
-=cut
+The following arguments are expected:
 
-=head2 valid_audience
+=item I<in_response_to>
 
-This method checks that the C<Audience> attribute equals our entityID and returns a boolean value.
+This must be the ID of the AuthnRequest we sent, which you should store in the user's session in order to supply it to this method. It will be used for checking that the I<InResponseTo> field of the assertion matches our request.
 
-    die "Invalid audience" if !$assertion->valid_audience;
+=item I<acs_url>
 
-=head2 valid_in_response_to
+This must be the URL of the AssertionConsumerService endpoint which received this assertion. It will be used for checking that it matches the I<Destination> value claimed in the assertion itself.
 
-This method checks that the C<InResponseTo> attribute equals the supplied request ID and returns a boolean value.
-
-    die "Invalid InResponseTo" if !$assertion->in_response_to($request_id);
-
-=head2 valid_not_before
-
-This method checks that the C<NotBefore> condition contained in the assertion is compatible with the current timestamp and returns a boolean value.
-
-    die "Invalid NotBefore" if !$assertion->valid_not_before;
-
-=head2 valid_not_after
-
-This method checks that the C<NotAfter> condition contained in the assertion is compatible with the current timestamp and returns a boolean value.
-
-    die "Invalid NotBefore" if !$assertion->valid_not_after;
+=back
 
 =head2 spid_level
 
@@ -211,5 +200,9 @@ This method returns the SPID level asserted by the Identity Provider, as an inte
 =head2 spid_session
 
 This method returns a L<Net::SPID::Session> object populated with information from this Assertion. It's serializable and you might want to store it for later reuse (i.e. for generating a logout request).
+
+=head2 attributes
+
+This method returns a hashref containing the attributes.
 
 =cut
