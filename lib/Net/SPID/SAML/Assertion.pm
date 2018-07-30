@@ -34,7 +34,7 @@ has 'spid_level' => (is => 'lazy', builder => sub {
 });
 
 has 'attributes' => (is => 'lazy', builder => sub {
-    {
+    return {
         map { $_->getAttribute('Name') => $_->findnodes("*[local-name()='AttributeValue']")->[0]->string_value }
             $_[0]->xpath->findnodes("//saml:Assertion/saml:AttributeStatement/saml:Attribute"),
     }
@@ -61,8 +61,9 @@ sub validate {
     }
     
     # this validates all the signatures in the given XML, and requires that at least one exists
-    #Mojo::XMLSig::verify($self->xml, $self->_idp->cert->pubkey)
-    #    or croak "Signature verification failed";
+    my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
+    Mojo::XMLSig::verify($self->xml, $pubkey)
+        or croak "Signature verification failed";
     
     # SPID regulations require that Assertion is signed, while Response can be not signed
     croak "Response/Assertion is not signed"
