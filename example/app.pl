@@ -86,6 +86,8 @@ post '/spid-sso' => sub {
     }
     
     # Log assertion as required by the SPID rules.
+    # TODO: log it in a way that does not mangle whitespace preventing signature from 
+    # being verified at a later time
     info "SPID Assertion: " . $assertion->xml;
     
     # Login successful! Initialize our application session and store
