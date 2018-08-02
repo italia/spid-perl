@@ -71,17 +71,8 @@ sub xml {
 sub redirect_url {
     my ($self, %args) = @_;
     
-    my $xml = $self->xml;
-    print STDERR $xml, "\n";
-    
-    # Check that this IdP offers a suitable SSO binding
-    # (current SPID specs do not enforce that all bindings are made available).
-    croak sprintf "IdP '%s' does not have a %s SSO binding",
-        $self->_idp->entityid, $self->binding
-        if !$self->_idp->sso_url($self->binding);
-    
-    my $redirect = $self->_spid->_sp->sso_redirect_binding($self->_idp, 'SAMLRequest');
-    return $redirect->sign($xml, $args{relaystate});
+    my $url = $self->_idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
+    return $self->SUPER::redirect_url($url, %args);
 }
 
 1;

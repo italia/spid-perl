@@ -2,6 +2,8 @@ package Net::SPID::SAML;
 use Moo;
 
 use Carp;
+use Crypt::OpenSSL::RSA;
+use File::Slurp qw(read_file);
 use MIME::Base64 qw(decode_base64);
 use Net::SAML2;
 use Net::SPID::SAML::Assertion;
@@ -21,6 +23,7 @@ has 'sp_attr_index' => (is => 'ro', required => 0);
 has 'cacert_file'   => (is => 'ro', required => 0);
 has '_idp'          => (is => 'ro', default => sub { {} });
 has '_sp'           => (is => 'lazy');
+has 'sp_key'        => (is => 'lazy');
 
 extends 'Net::SPID';
 
@@ -37,6 +40,13 @@ sub _build__sp {
         org_display_name => 'xxx',
         org_contact      => 'xxx',
     );
+}
+
+sub _build_sp_key {
+    my ($self) = @_;
+    
+    my $key_string = read_file($self->sp_key_file);
+    return Crypt::OpenSSL::RSA->new_private_key($key_string);
 }
 
 # TODO: generate the actual SPID button.

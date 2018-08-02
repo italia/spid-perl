@@ -9,7 +9,10 @@ has 'IssueInstant'      => (is => 'lazy');
 
 use Crypt::OpenSSL::Random;
 use DateTime;
+use IO::Compress::RawDeflate qw(rawdeflate);
+use MIME::Base64 qw(encode_base64);
 use XML::Writer;
+use URI;
 
 sub _build_ID {
     my ($self) = @_;
@@ -40,6 +43,27 @@ sub xml {
     );
     
     return ($x, $saml, $samlp);
+}
+
+sub redirect_url {
+    my ($self, $url, %args) = @_;
+    
+    my $xml = $self->xml;
+    print STDERR $xml, "\n";
+    
+    my $payload = '';
+    rawdeflate \$xml => \$payload;
+    $payload = encode_base64($payload, '');
+    
+    my $u = URI->new($url);
+    $u->query_param('SAMLRequest', $payload);
+    $u->query_param('RelayState', $args{relaystate}) if defined $args{relaystate};
+    $u->query_param('SigAlg', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+    
+    my $sig = encode_base64($self->_spid->sp_key->sign($u->query), '');
+    $u->query_param('Signature', $sig);
+
+    return $u->as_string;
 }
 
 1;
