@@ -1,7 +1,7 @@
-package Net::SPID::SAML::Assertion;
+package Net::SPID::SAML::In::Assertion;
 use Moo;
 
-extends 'Net::SPID::SAML::ProtocolMessage::Incoming';
+extends 'Net::SPID::SAML::In::Base';
 
 has 'NotBefore' => (is => 'lazy', builder => sub {
     DateTime::Format::XSD->parse_datetime

@@ -1,7 +1,7 @@
-package Net::SPID::SAML::AuthnRequest;
+package Net::SPID::SAML::Out::AuthnRequest;
 use Moo;
 
-extends 'Net::SPID::SAML::ProtocolMessage::Outgoing';
+extends 'Net::SPID::SAML::Out::Base';
 
 has 'acs_url'       => (is => 'rw', required => 0);
 has 'acs_index'     => (is => 'rw', required => 0);

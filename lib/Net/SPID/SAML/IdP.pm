@@ -10,7 +10,7 @@ use Crypt::OpenSSL::X509;
 sub authnrequest {
     my ($self, %args) = @_;
     
-    return Net::SPID::SAML::AuthnRequest->new(
+    return Net::SPID::SAML::Out::AuthnRequest->new(
         _spid       => $self->_spid,
         _idp        => $self,
         %args,
@@ -20,7 +20,7 @@ sub authnrequest {
 sub logoutrequest {
     my ($self, %args) = @_;
     
-    return Net::SPID::SAML::LogoutRequest::Outgoing->new(
+    return Net::SPID::SAML::Out::LogoutRequest->new(
         _spid       => $self->_spid,
         _idp        => $self,
         %args,
@@ -96,7 +96,7 @@ This method is not supposed to be instantiated directly. Use the C<Net::SPID::SA
 
 =head2 authnrequest
 
-This method generates an AuthnRequest addressed to this Identity Provider. Note that this method does not perform any network call, it just generates a L<Net::SPID::SAML::AuthnRequest> object.
+This method generates an AuthnRequest addressed to this Identity Provider. Note that this method does not perform any network call, it just generates a L<Net::SPID::SAML::Out::AuthnRequest> object.
 
     my $authnrequest = $idp->authnrequest(
         #acs_url    => 'https://...',   # URL of AssertionConsumerServiceURL to use
@@ -139,7 +139,7 @@ The following arguments can be supplied to C<logoutrequest()>:
 
 =item I<session>
 
-The L<Net::SPID::Session> object (originally returned by L<Net::SPID::SAML/parse_assertion> through a L<Net::SPID::SAML::Assertion> object) representing the SPID session to close.
+The L<Net::SPID::Session> object (originally returned by L<Net::SPID::SAML/parse_assertion> through a L<Net::SPID::SAML::In::Assertion> object) representing the SPID session to close.
 
 =back
 

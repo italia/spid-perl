@@ -1,4 +1,4 @@
-package Net::SPID::SAML::ProtocolMessage::Incoming;
+package Net::SPID::SAML::In::Base;
 use Moo;
 
 extends 'Net::SPID::SAML::ProtocolMessage';

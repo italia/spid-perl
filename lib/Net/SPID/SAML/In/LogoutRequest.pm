@@ -1,4 +1,4 @@
-package Net::SPID::SAML::LogoutRequest::Incoming;
+package Net::SPID::SAML::In::LogoutRequest;
 use Moo;
 
 has '_spid' => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML

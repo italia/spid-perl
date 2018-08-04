@@ -1,9 +1,9 @@
-package Net::SPID::SAML::LogoutResponse::Incoming;
+package Net::SPID::SAML::In::LogoutResponse;
 use Moo;
 
 use Carp qw(croak);
 
-extends 'Net::SPID::SAML::ProtocolMessage::Incoming';
+extends 'Net::SPID::SAML::In::Base';
 
 has 'StatusCode' => (is => 'lazy', builder => sub {
     $_[0]->xpath->findvalue('/samlp:LogoutResponse/samlp:Status/samlp:StatusCode/@Value')->value

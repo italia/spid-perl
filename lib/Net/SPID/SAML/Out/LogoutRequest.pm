@@ -1,7 +1,7 @@
-package Net::SPID::SAML::LogoutRequest::Outgoing;
+package Net::SPID::SAML::Out::LogoutRequest;
 use Moo;
 
-extends 'Net::SPID::SAML::ProtocolMessage::Outgoing';
+extends 'Net::SPID::SAML::Out::Base';
 
 has 'session'       => (is => 'ro', required => 1);
 
