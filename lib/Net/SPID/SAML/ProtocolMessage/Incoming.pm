@@ -67,7 +67,7 @@ sub _validate_redirect {
     # verify the response
     my $SigAlg = $u->query_param('SigAlg');
     croak "Unsupported SigAlg: $SigAlg"
-         unless $SigAlg eq 'http://www.w3.org/2000/09/xmldsig#rsa-sha256';
+         unless $SigAlg eq 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     
     my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
     my $sig = decode_base64($u->query_param_delete('Signature'));

@@ -3,6 +3,7 @@ use Moo;
 
 use Carp;
 use Crypt::OpenSSL::RSA;
+use Crypt::OpenSSL::X509;
 use File::Slurp qw(read_file);
 use MIME::Base64 qw(decode_base64);
 use Net::SAML2;
@@ -25,6 +26,7 @@ has 'cacert_file'   => (is => 'ro', required => 0);
 has '_idp'          => (is => 'ro', default => sub { {} });
 has '_sp'           => (is => 'lazy');
 has 'sp_key'        => (is => 'lazy');
+has 'sp_cert'       => (is => 'lazy');
 
 extends 'Net::SPID';
 
@@ -50,6 +52,12 @@ sub _build_sp_key {
     my $key = Crypt::OpenSSL::RSA->new_private_key($key_string);
     $key->use_sha256_hash;
     return $key;
+}
+
+sub _build_sp_cert {
+    my ($self) = @_;
+    
+    return Crypt::OpenSSL::X509->new_from_file($self->sp_cert_file);
 }
 
 # TODO: generate the actual SPID button.

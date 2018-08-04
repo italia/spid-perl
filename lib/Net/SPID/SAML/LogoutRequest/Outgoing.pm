@@ -4,13 +4,13 @@ use Moo;
 extends 'Net::SPID::SAML::ProtocolMessage::Outgoing';
 
 has 'session'       => (is => 'ro', required => 1);
-has 'binding'       => (is => 'rw', required => 1,
-    default => sub { 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect' });
 
 use Carp;
 
 sub xml {
-    my ($self) = @_;
+    my ($self, %args) = @_;
+    
+    $args{binding} //= 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect';
     
     my ($x, $saml, $samlp) = $self->SUPER::xml;
 
@@ -18,7 +18,7 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->slo_url($self->binding),
+        Destination     => $self->_idp->slo_url($args{binding}),
     };
     $x->startTag([$samlp, 'LogoutRequest'], %$req_attrs);
     
@@ -26,6 +26,10 @@ sub xml {
         Format          => 'urn:oasis:names:tc:SAML:2.0:nameid-format:entity',
         NameQualifier   => $self->_spid->sp_entityid,
     );
+    
+    if ($args{signature_template}) {
+        $x->raw($self->_signature_template($self->ID));
+    }
     
     $x->dataElement([$saml, 'NameID'], $self->session->nameid, 
         Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient',
@@ -46,11 +50,17 @@ sub xml {
 sub redirect_url {
     my ($self, %args) = @_;
     
-    die "Can't call redirect_url() on non-HTTP-Redirect messages"
-        if $self->binding ne 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect';
-    
-    my $url = $self->_idp->slo_url($self->binding);
+    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
+        or croak "No HTTP-POST binding is available for Single Logout";
     return $self->SUPER::redirect_url($url, %args);
+}
+
+sub post_form {
+    my ($self, %args) = @_;
+    
+    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST')
+        or croak "No HTTP-POST binding is available for Single Logout";
+    return $self->SUPER::post_form($url, %args);
 }
 
 1;
@@ -92,6 +102,12 @@ This method generates the message in XML format (signed, if using the HTTP-POST 
 This method returns the full URL of the Identity Provider where user should be redirected in order to initiate their Single Logout. In SAML words, this implements the HTTP-Redirect binding.
 
     my $url = $logoutreq->redirect_url;
+
+=head2 post_form
+
+This method returns an HTML page with a JavaScript auto-post command that submits the request to the Identity Provider in order to initiate their Single Logout. In SAML words, this implements the HTTP-POST binding.
+
+    my $url = $authnreq->post_form;
 
 =cut
 

@@ -11,6 +11,7 @@ use Crypt::OpenSSL::Random;
 use DateTime;
 use IO::Compress::RawDeflate qw(rawdeflate);
 use MIME::Base64 qw(encode_base64);
+use Mojo::XMLSig;
 use XML::Writer;
 use URI;
 
@@ -39,16 +40,51 @@ sub xml {
         PREFIX_MAP      => {
             $saml   => 'saml2',
             $samlp  => 'saml2p'
-        }
+        },
+        UNSAFE          => 1,  # this enables raw()
     );
     
     return ($x, $saml, $samlp);
 }
 
+sub _signature_template {
+    my ($self, $ref) = @_;
+    
+    my $cert = $self->_spid->sp_cert->as_string;
+    $cert =~ s/^-+BEGIN CERTIFICATE-+\n//;
+    $cert =~ s/\n-+END CERTIFICATE-+\n?//;
+    
+    # TODO: replace this with XML::Writer calls in order to disable UNSAFE?
+    return <<"EOF"
+  <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" />
+      <ds:Reference URI="#$ref">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+        <ds:DigestValue></ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue></ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>$cert</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
+EOF
+}
+
 sub redirect_url {
     my ($self, $url, %args) = @_;
     
-    my $xml = $self->xml;
+    $args{param} //= 'SAMLRequest';
+    
+    my $xml = $self->xml(binding => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
     print STDERR $xml, "\n";
     
     my $payload = '';
@@ -56,7 +92,7 @@ sub redirect_url {
     $payload = encode_base64($payload, '');
     
     my $u = URI->new($url);
-    $u->query_param('SAMLRequest', $payload);
+    $u->query_param($args{param}, $payload);
     $u->query_param('RelayState', $args{relaystate}) if defined $args{relaystate};
     $u->query_param('SigAlg', 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256');
     
@@ -64,6 +100,35 @@ sub redirect_url {
     $u->query_param('Signature', $sig);
 
     return $u->as_string;
+}
+
+sub post_form {
+    my ($self, $url, %args) = @_;
+    
+    my $xml = $self->xml(
+        signature_template => 1,
+        binding            => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+    );
+    print "$xml\n\n";
+    $xml = Mojo::XMLSig::sign($xml, $self->_spid->sp_key);
+    my $payload = encode_base64($xml, '');
+    
+    my $param = $args{param} // 'SAMLRequest';
+    my $relaystate = $args{relaystate} // '';
+    $relaystate =~ s/"/&quot;/g;
+    $relaystate =~ s/</&lt;/g;
+    $relaystate =~ s/>/&rt;/g;
+    
+    return <<"EOF"
+<html>
+    <body onload="javascript:document.forms[0].submit()">
+        <form method="post" action="$url">
+            <input type="hidden" name="$param" value="$payload">
+            <input type="hidden" name="RelayState" value="$relaystate">
+        </form>
+    </body>
+</html>
+EOF
 }
 
 1;

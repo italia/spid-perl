@@ -8,10 +8,8 @@ has 'acs_index'     => (is => 'rw', required => 0);
 has 'attr_index'    => (is => 'rw', required => 0);
 has 'level'         => (is => 'rw', required => 0, default => sub { 1 });
 has 'comparison'    => (is => 'rw', required => 0, default => sub { 'minimum' });
-has 'binding'       => (is => 'rw', required => 1,
-    default => sub { 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect' });
 
-use Carp;
+use Carp qw(croak);
 
 sub BUILD {
     my ($self) = @_;
@@ -23,7 +21,9 @@ sub BUILD {
 }
 
 sub xml {
-    my ($self) = @_;
+    my ($self, %args) = @_;
+    
+    $args{binding} //= 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect';
     
     my ($x, $saml, $samlp) = $self->SUPER::xml;
 
@@ -31,7 +31,7 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->sso_url($self->binding),
+        Destination     => $self->_idp->sso_url($args{binding}),
         ForceAuthn      => ($self->level > 1) ? 'true' : 'false',
     };
     if (defined (my $acs_url = $self->acs_url // $self->_spid->sp_acs_url)) {
@@ -51,6 +51,10 @@ sub xml {
         NameQualifier   => $self->_spid->sp_entityid,
     );
     
+    if ($args{signature_template}) {
+        $x->raw($self->_signature_template($self->ID));
+    }
+    
     $x->dataElement([$samlp, 'NameIDPolicy'], undef, 
         Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient');
     
@@ -61,18 +65,23 @@ sub xml {
     $x->endTag(); #AuthnRequest
     $x->end();
     
-    my $xml = $x->to_string;
-    
-    # TODO: if we're using HTTP-POST, sign this document
-    
-    return $xml;
+    return $x->to_string;
 }
 
 sub redirect_url {
     my ($self, %args) = @_;
     
-    my $url = $self->_idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
+    my $url = $self->_idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
+        or croak "No HTTP-Redirect binding is available for Single Sign-On";
     return $self->SUPER::redirect_url($url, %args);
+}
+
+sub post_form {
+    my ($self, %args) = @_;
+    
+    my $url = $self->_idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST')
+        or croak "No HTTP-POST binding is available for Single Sign-On";
+    return $self->SUPER::post_form($url, %args);
 }
 
 1;
@@ -125,6 +134,22 @@ The following arguments can be supplied:
 =item I<relaystate>
 
 (Optional.) An arbitrary payload can be written in this argument, and it will be returned to us along with the Response/Assertion. Please note that since we're passing this in the query string it can't be too long otherwise the URL will be truncated and the request will fail. Also note that this is transmitted in clear-text and that you are responsible for making sure the value is coupled with this AuthnRequest either cryptographycally or by using a lookup table on your side.
+
+=back
+
+=head2 post_form
+
+This method returns an HTML page with a JavaScript auto-post command that submits the request to the Identity Provider in order to initiate their Single Sign-On. In SAML words, this implements the HTTP-POST binding.
+
+    my $url = $authnreq->post_form(relaystate => 'foobar');
+
+The following arguments can be supplied:
+
+=over
+
+=item I<relaystate>
+
+(Optional.) An arbitrary payload can be written in this argument, and it will be returned to us along with the Response/Assertion. Please note that this is not signed and it's transmitted in clear-text; you are responsible for signing it and making sure the value is coupled with this AuthnRequest either cryptographycally or by using a lookup table on your side.
 
 =back
 

@@ -22,7 +22,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |**AuthnRequest generation (1.2.2.1):**||
 |generation of AuthnRequest XML|✓|
 |HTTP-Redirect binding|✓|
-|HTTP-POST binding| |
+|HTTP-POST binding|✓|
 |`AssertionConsumerServiceURL` customization|✓|
 |`AssertionConsumerServiceIndex` customization|✓|
 |`AttributeConsumingServiceIndex` customization|✓|
@@ -54,7 +54,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |**LogoutRequest generation (for SP-initiated logout):**||
 |generation of LogoutRequest XML|✓|
 |HTTP-Redirect binding|✓|
-|HTTP-POST binding| |
+|HTTP-POST binding|✓|
 |**LogoutResponse parsing (for SP-initiated logout):**||
 |parsing of LogoutResponse XML|✓|
 |verification of `Response/Signature` value (if any)|✓|

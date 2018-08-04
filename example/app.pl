@@ -51,6 +51,9 @@ get '/spid-login' => sub {
     # in order to prevent forgery.
     session 'spid_authnreq_id' => $authnreq->ID;
     
+    # Uncomment the following line to use the HTTP-POST binding instead of HTTP-Redirect:
+    ###return $authnreq->post_form;
+    
     # Redirect user to the IdP using its HTTP-Redirect binding.
     redirect $authnreq->redirect_url, 302;
 };
@@ -119,6 +122,9 @@ get '/logout' => sub {
     # Save the ID of the LogoutRequest so that we can check it in the response
     # in order to prevent forgery.
     session 'spid_logoutreq_id' => $logoutreq->ID;
+    
+    # Uncomment the following line to use the HTTP-POST binding instead of HTTP-Redirect:
+    ###return $logoutreq->post_form;
     
     # Redirect user to the Identity Provider for logout.
     redirect $logoutreq->redirect_url, 302;
