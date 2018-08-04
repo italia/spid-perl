@@ -18,7 +18,7 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->sso_url($self->binding),
+        Destination     => $self->_idp->slo_url($self->binding),
     };
     $x->startTag([$samlp, 'LogoutRequest'], %$req_attrs);
     
@@ -46,7 +46,10 @@ sub xml {
 sub redirect_url {
     my ($self, %args) = @_;
     
-    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
+    die "Can't call redirect_url() on non-HTTP-Redirect messages"
+        if $self->binding ne 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect';
+    
+    my $url = $self->_idp->slo_url($self->binding);
     return $self->SUPER::redirect_url($url, %args);
 }
 

@@ -133,6 +133,7 @@ post '/spid-slo' => sub {
         my $response = eval {
             $spid->parse_logoutresponse(
                 param('SAMLResponse'),
+                undef,
                 session('spid_logoutreq_id'),
             )
         };
@@ -151,7 +152,7 @@ post '/spid-slo' => sub {
         session 'spid_session' => undef;
         
         # TODO: handle partial logout. Log? Show message to user?
-        # $response->success eq 'partial'
+        # if ($response->status eq 'partial') { ... }
         
         # Redirect user back to main page.
         redirect '/';

@@ -58,7 +58,7 @@ sub redirect_url {
     my $u = URI->new($url);
     $u->query_param('SAMLRequest', $payload);
     $u->query_param('RelayState', $args{relaystate}) if defined $args{relaystate};
-    $u->query_param('SigAlg', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+    $u->query_param('SigAlg', 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256');
     
     my $sig = encode_base64($self->_spid->sp_key->sign($u->query), '');
     $u->query_param('Signature', $sig);

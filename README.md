@@ -58,7 +58,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |**LogoutResponse parsing (for SP-initiated logout):**||
 |parsing of LogoutResponse XML|✓|
 |verification of `Response/Signature` value (if any)|✓|
-|verification of `Response/Signature` certificate (if any) against IdP metadata| |
+|verification of `Response/Signature` certificate (if any) against IdP metadata|✓|
 |verification of `Issuer`|✓|
 |verification of `Destination`| |
 |PartialLogout detection|✓|

@@ -45,12 +45,18 @@ use DateTime;
 use DateTime::Format::XSD;
 use Mojo::XMLSig;
 
+sub _build_Issuer {
+    $_[0]->xpath->findvalue('/samlp:Response/saml:Issuer')->value;
+}
+
 sub validate {
     my ($self, %args) = @_;
     
     $self->SUPER::validate(%args) or return 0;
     
     my $xpath = $self->xpath;
+    
+    # TODO: validate IssueInstant
     
     {
         my $response_issuer  = $xpath->findvalue('/samlp:Response/saml:Issuer')->value;

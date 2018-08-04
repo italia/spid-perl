@@ -11,7 +11,8 @@ use Net::SPID::SAML::AuthnRequest;
 use Net::SPID::SAML::IdP;
 use Net::SPID::SAML::LogoutRequest::Incoming;
 use Net::SPID::SAML::LogoutRequest::Outgoing;
-use Net::SPID::SAML::LogoutResponse;
+use Net::SPID::SAML::LogoutResponse::Incoming;
+use Net::SPID::SAML::LogoutResponse::Outgoing;
 use URI::Escape qw(uri_escape);
 
 has 'sp_entityid'   => (is => 'ro', required => 1);
@@ -46,7 +47,9 @@ sub _build_sp_key {
     my ($self) = @_;
     
     my $key_string = read_file($self->sp_key_file);
-    return Crypt::OpenSSL::RSA->new_private_key($key_string);
+    my $key = Crypt::OpenSSL::RSA->new_private_key($key_string);
+    $key->use_sha256_hash;
+    return $key;
 }
 
 # TODO: generate the actual SPID button.
@@ -135,32 +138,18 @@ sub parse_assertion {
 }
 
 sub parse_logoutresponse {
-    my ($self, $payload, $in_response_to) = @_;
+    my ($self, $payload, $url, $in_response_to) = @_;
     
-    my $xml = decode_base64($payload);
-    print STDERR $xml;
-    
-    # verify signature and CA
-    my $post = Net::SAML2::Binding::POST->new(
-        cacert => $self->cacert_file,
-    );
-    $post->handle_response($payload)
-        or croak "Failed to parse SAML LogoutResponse";
-    
-    # parse message
-    my $response = Net::SAML2::Protocol::LogoutResponse->new_from_xml(
-        xml => $xml,
-    );
-    
-    # validate response
-    croak "Invalid SAML LogoutResponse"
-        if !$response->valid($in_response_to);
-    
-    return Net::SPID::SAML::LogoutResponse->new(
+    my $r = Net::SPID::SAML::LogoutResponse::Incoming->new(
         _spid       => $self,
-        _logoutres  => $response,
-        xml         => $xml,
+        base64      => $payload,
+        URL         => $url,
     );
+    
+    # Validate response. This will throw an exception in case of failure.
+    $r->validate(in_response_to => $in_response_to);
+    
+    return $r;
 }
 
 sub parse_logoutrequest {
