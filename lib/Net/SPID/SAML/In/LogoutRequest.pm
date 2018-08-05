@@ -1,21 +1,37 @@
 package Net::SPID::SAML::In::LogoutRequest;
 use Moo;
 
-has '_spid' => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML
-has 'xml'   => (is => 'ro', required => 1);
+extends 'Net::SPID::SAML::In::Base';
 
-# Net::SPID::SAML::IdP object
-has '_idp' => (
-    is          => 'ro',
-    required    => 1,
-);
+use Carp qw(croak);
 
-# Net::SAML2::Protocol::LogoutRequest object
-has '_logoutreq' => (
-    is          => 'ro',
-    required    => 1,
-    handles     => [qw(id)],
-);
+sub validate {
+    my ($self, %args) = @_;
+    
+    $self->SUPER::validate(%args) or return 0;
+    
+    my $xpath = $self->xpath;
+    
+    # if message is signed, validate that signature;
+    # otherwise validate $args{URL}
+    $self->_validate_post_or_redirect($args{URL});
+    
+    # TODO: make this check required (and update the checklist in README)
+    if (exists $args{slo_url}) {
+        my $destination  = $xpath->findvalue('/samlp:LogoutRequest/@Destination')->value;
+        croak "Invalid Destination: '%s' (expected: '%s')",
+            $destination, $args{slo_url},
+            if $destination ne $args{slo_url};
+    }
+    
+    return 1;
+}
+
+sub make_response {
+    my ($self, %args) = @_;
+    
+    return $self->_idp->logoutresponse(in_response_to => $self->ID, %args);
+}
 
 1;
 
@@ -27,7 +43,7 @@ has '_logoutreq' => (
     my $spid = Net::SPID->new(...);
     
     # parse a LogoutRequest
-    my $logutreq = $spid->parse_logoutrequest;
+    my $logoutreq = $spid->parse_logoutrequest($payload, $url);
 
 =head1 ABSTRACT
 
@@ -44,5 +60,22 @@ This class is not supposed to be instantiated directly. You can get one by calli
 This method returns the raw message in XML format.
 
     my $xml = $logoutreq->xml;
+
+=head2 validate
+
+This method performs validation of the incoming message according to the SPID rules. In case of success it returns a true value; in case of failure it will die with the relevant error.
+
+    eval { $logoutreq->validate };
+    if ($@) {
+        warn "Bad LogoutRequest: $@";
+    }
+
+=head2 make_response
+
+This is a shortcut for L<Net::SPID::SAML::IdP/logoutresponse>. See its documentation for the required parameters (C<in_response_to> is automatically supplied).
+
+    my $logoutres = $logoutreq->make_response(
+        status => 'success',
+    );
 
 =cut

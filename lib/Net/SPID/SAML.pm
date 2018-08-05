@@ -109,13 +109,6 @@ sub load_idp_from_xml {
         # TODO: verify IdP certificate and return 0 if invalid
     }
     
-    # Since we only support HTTP-Redirect SSO and SLO requests, warn user if the loaded
-    # Identity Provider does not expose such bindings (they are not mandatory).
-    warn sprintf "IdP '%s' does not have a HTTP-Redirect SSO binding", $idp->entityid,
-        if !$idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
-    warn sprintf "IdP '%s' does not have a HTTP-Redirect SLO binding", $idp->entityid,
-        if !$idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
-    
     return 1;
 }
 
@@ -161,28 +154,18 @@ sub parse_logoutresponse {
 }
 
 sub parse_logoutrequest {
-    my ($self, $payload) = @_;
+    my ($self, $payload, $url) = @_;
     
-    my $xml = decode_base64($payload);
-    print STDERR $xml;
-    
-    # verify signature and CA
-    my $post = Net::SAML2::Binding::POST->new(
-        cacert => $self->cacert_file,
-    );
-    $post->handle_response($payload)
-        or croak "Failed to parse SAML LogoutResponse";
-    
-    # parse message
-    my $request = Net::SAML2::Protocol::LogoutRequest->new_from_xml(
-        xml => $xml,
-    );
-    
-    return Net::SPID::SAML::In::LogoutRequest->new(
+    my $r = Net::SPID::SAML::In::LogoutRequest->new(
         _spid       => $self,
-        _logoutreq  => $request,
-        xml         => $xml,
+        base64      => $payload,
+        URL         => $url,
     );
+    
+    # Validate request. This will throw an exception in case of failure.
+    $r->validate;
+    
+    return $r;
 }
 
 1;
@@ -309,16 +292,19 @@ A second argument can be supplied, containing the C<ID> of the request message; 
 
 =head2 parse_logoutresponse
 
-This method accepts a XML payload and parses it as a LogoutResponse, returning a L<Net::SPID::SAML::LogoutResponse> object. Validation is performed, so this method may throw an exception.
-A second argument can be supplied, containing the C<ID> of the request message; in this case validation will also check the C<InResponseTo> attribute.
+This method accepts a XML payload and parses it as a LogoutResponse, returning a L<Net::SPID::SAML::LogoutResponse> object. Validation is performed automatically by calling the C<validate()> method, so this method may throw an exception.
+The XML payload can be supplied also in Base64-encoded form, thus you can supply the value of C<SAMLResponse> parameter directly.
+In case the LogoutResponse was supplied through a HTTP-Redirect binding (in other words, via GET), the request URI (inclusive of the query string) must be supplied as second argument. This is used for signature validation. If HTTP-POST was used the second argument is ignored.
+A third argument can be supplied, containing the C<ID> of the request message; in this case validation will also check the C<InResponseTo> attribute.
 
-    my $response = $spid->parse_logoutresponse($xml, $request_id);
+    my $response = $spid->parse_logoutresponse($xml, $url, $request_id);
 
 =head2 parse_logoutrequest
 
 This method accepts a XML payload and parses it as a LogoutRequest, returning a L<Net::SPID::SAML::LogoutRequest>. Use this to handle third-party-initiated logout procedures. Validation is performed, so this method may throw an exception.
+In case HTTP-Redirect was used to deliver this LogoutRequest to our application, a second argument is required containing the request URI (see L<parse_logoutresponse>).
 
-    my $request = $spid->parse_logoutrequest($xml);
+    my $request = $spid->parse_logoutrequest($xml, $url);
 
 =cut
 

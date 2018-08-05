@@ -45,10 +45,6 @@ use DateTime;
 use DateTime::Format::XSD;
 use Mojo::XMLSig;
 
-sub _build_Issuer {
-    $_[0]->xpath->findvalue('/samlp:Response/saml:Issuer')->value;
-}
-
 sub validate {
     my ($self, %args) = @_;
     
@@ -128,7 +124,7 @@ sub spid_session {
     return Net::SPID::Session->new(
         idp_id          => $self->Issuer,
         nameid          => $self->NameID,
-        session         => $self->SessionIndex,
+        session_index   => $self->SessionIndex,
         attributes      => $self->attributes,
         level           => $self->spid_level,
         assertion_xml   => $self->xml,
@@ -144,13 +140,11 @@ sub spid_session {
     # initialize our SPID object
     my $spid = Net::SPID->new(...);
     
-    # parse a response from an Identity Provider
+    # parse a response from an Identity Provider and validate it
     my $assertion = eval {
         $spid->parse_assertion($saml_response_xml, $authnreq_id);
     };
-    
-    # perform validation
-    die "Invalid assertion!" if !$assertion->validate($our_entityid, $request_id);
+    die "Invalid assertion: $@" if $@;
     
     # read the SPID level
     print "SPID Level: ", $assertion->spid_level, "\n";
@@ -175,8 +169,6 @@ This method returns the raw assertion in its XML format.
     my $xml = $assertion->xml;
 
 =head2 validate
-
-This method performs validation by calling all of the C<valid_*> methods described below.
 
 On success it returns a true value. On failure it will throw an exception.
 

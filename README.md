@@ -65,13 +65,13 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |**LogoutRequest parsing (for third-party-initiated logout):**||
 |parsing of LogoutRequest XML|✓|
 |verification of `Response/Signature` value (if any)|✓|
-|verification of `Response/Signature` certificate (if any) against IdP metadata| |
-|verification of `Issuer`| |
+|verification of `Response/Signature` certificate (if any) against IdP metadata|✓|
+|verification of `Issuer`|✓|
 |verification of `Destination`| |
 |parsing of `NameID`|✓|
 |**LogoutResponse generation (for third-party-initiated logout):**||
 |generation of LogoutResponse XML|✓|
-|HTTP-Redirect binding| |
+|HTTP-Redirect binding|✓|
 |HTTP-POST binding|✓|
 |PartialLogout customization|✓|
 |**AttributeQuery generation (2.2.2.1):**||

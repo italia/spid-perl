@@ -117,7 +117,7 @@ This class is not supposed to be instantiated directly. You can craft an AuthnRe
 
 =head2 xml
 
-This method generates the message in XML format (signed, if using the HTTP-POST binding).
+This method generates the message in XML format.
 
     my $xml = $authnreq->xml;
 
@@ -141,7 +141,7 @@ The following arguments can be supplied:
 
 This method returns an HTML page with a JavaScript auto-post command that submits the request to the Identity Provider in order to initiate their Single Sign-On. In SAML words, this implements the HTTP-POST binding.
 
-    my $url = $authnreq->post_form(relaystate => 'foobar');
+    my $html = $authnreq->post_form(relaystate => 'foobar');
 
 The following arguments can be supplied:
 

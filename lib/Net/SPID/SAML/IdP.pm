@@ -30,22 +30,10 @@ sub logoutrequest {
 sub logoutresponse {
     my ($self, %args) = @_;
     
-    my $res = $self->_spid->_sp->logout_response(
-        # FIXME: what is the correct Destination for a LogoutResponse?
-        $self->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST'),
-        'success',
-        $args{in_response_to},
-    );
-    
-    if ($args{status} && $args{status} eq 'partial') {
-        $res->status($res->status_uri('requester'));
-        $res->substatus($res->status_uri('partial'));
-    }
-    
-    return Net::SPID::SAML::LogoutResponse->new(
+    return Net::SPID::SAML::Out::LogoutResponse->new(
         _spid       => $self->_spid,
         _idp        => $self,
-        _logoutres  => $res,
+        %args,
     );
 }
 
@@ -137,7 +125,7 @@ The following arguments can be supplied to C<logoutrequest()>:
 
 =over
 
-=item I<session>
+=item I<session_index>
 
 The L<Net::SPID::Session> object (originally returned by L<Net::SPID::SAML/parse_assertion> through a L<Net::SPID::SAML::In::Assertion> object) representing the SPID session to close.
 

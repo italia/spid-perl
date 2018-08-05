@@ -4,13 +4,19 @@ use Moo;
 extends 'Net::SPID::SAML::ProtocolMessage';
 
 has '_idp'  => (is => 'rw', required => 0); # Net::SPID::SAML::IdP
-has 'xml'   => (is => 'ro', required => 0);
+has 'xml'   => (is => 'ro', required => 1);
 has 'url'   => (is => 'ro', required => 0);
 has 'xpath' => (is => 'lazy');
 
-has 'Issuer' => (is => 'lazy');  # Derived classes implement this
+has 'ID' => (is => 'lazy', builder => sub {
+    $_[0]->xpath->findvalue('/*/@ID')->value
+});
 
-has 'RelayState' => (is => 'lazy', builder => sub { URI->new($_[0]) });
+has 'Issuer' => (is => 'lazy', builder => sub {
+    $_[0]->xpath->findvalue('/*/saml:Issuer')->value
+});
+
+has 'relaystate' => (is => 'ro');
 
 use Carp qw(croak);
 use IO::Uncompress::RawInflate qw(rawinflate);
@@ -25,8 +31,18 @@ sub BUILDARGS {
         $args{xml} = decode_base64(delete $args{base64});
     }
     
-    croak "xml or url required"
-        if !$args{xml} && !$args{url};
+    if (exists $args{url}) {
+        my $u = URI->new($args{url});
+        if ($u->query_param('SAMLEncoding')) {
+            croak "Invalid SAMLEncoding"
+                if $u->query_param('SAMLEncoding') ne 'urn:oasis:names:tc:SAML:2.0:bindings:URL-Encoding:DEFLATE';
+        }
+        my $payload = $u->query_param('SAMLRequest') // $u->query_param('SAMLResponse');
+        $payload = decode_base64($payload);
+        rawinflate \$payload => \$payload;
+        $args{xml} //= $payload;
+        $args{relaystate} //= $u->query_param('RelayState');
+    }
     
     return {%args};
 }
@@ -59,31 +75,34 @@ sub validate {
     return 1;
 }
 
-sub _validate_redirect {
-    my ($self, $url) = @_;
+sub _validate_post_or_redirect {
+    my ($self) = @_;
     
-    my $u = URI->new($url);
+    my $xpath = $self->xpath;
+    
+    if ($xpath->findnodes('/*/dsig:Signature')->size > 0) {
+        # message is signed, it's HTTP-POST
+        my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
+        Mojo::XMLSig::verify($self->xml, $pubkey)
+            or croak "Signature verification failed";
+    } elsif ($self->url) {
+        # this is supposed to be a HTTP-Redirect binding
+        my $u = URI->new($self->url);
         
-    # verify the response
-    my $SigAlg = $u->query_param('SigAlg');
-    croak "Unsupported SigAlg: $SigAlg"
-         unless $SigAlg eq 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+        # verify the response
+        my $SigAlg = $u->query_param('SigAlg');
+        croak "Unsupported SigAlg: $SigAlg"
+             unless $SigAlg eq 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     
-    my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
-    my $sig = decode_base64($u->query_param_delete('Signature'));
-    $pubkey->verify($u->query, $sig)
-        or croak "Signature verification failed";
+        my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
+        my $sig = decode_base64($u->query_param_delete('Signature'));
+        $pubkey->verify($u->query, $sig)
+            or croak "Signature verification failed";
     
-    return 1;
-    
-    # unpack the SAML request
-    my $payload = decode_base64($u->query_param('SAMLResponse'));
-    rawinflate \$payload => \$payload;
-    
-    # unpack the relaystate
-    my $relaystate = $u->query_param('RelayState');
-
-    return ($payload, $relaystate);
+        return 1;
+    } else {
+        croak "Message does not contain signature, and URL was not supplied.";
+    }
 }
 
 1;

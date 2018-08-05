@@ -1,40 +1,73 @@
-package Net::SPID::SAML::LogoutResponse;
+package Net::SPID::SAML::Out::LogoutResponse;
 use Moo;
 
-has '_spid' => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML
-has 'xml'   => (is => 'ro', required => 1);                 # original unparsed XML
+extends 'Net::SPID::SAML::Out::Base';
 
-# Net::SAML2::Protocol::LogoutResponse object
-has '_logoutres' => (
-    is          => 'ro',
-    required    => 1,
-    handles     => [qw(id)],
-);
+has 'status' => (is => 'rw', default => sub { 'success' }); # success/failure/partial
+has 'in_response_to' => (is => 'rw', required => 1);
 
 use Carp;
 
-sub redirect_url {
-    my ($self) = @_;
+sub xml {
+    my ($self, %args) = @_;
     
-    my $xml = $self->_logoutres->as_xml;
-    print STDERR $xml, "\n";
+    $args{binding} //= 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect';
     
-    # Check that this IdP offers a HTTP-Redirect SLO binding.
-    croak sprintf "IdP '%s' does not have a HTTP-Redirect SLO binding", $self->_idp->entityid,
-        if !$self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect');
+    my ($x, $saml, $samlp) = $self->SUPER::xml;
+
+    my $req_attrs = {
+        ID              => $self->ID,
+        IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
+        Version         => '2.0',
+        Destination     => $self->_idp->slo_url($args{binding}),
+        InResponseTo    => $self->in_response_to,
+    };
+    $x->startTag([$samlp, 'LogoutResponse'], %$req_attrs);
     
-    # TODO: make sure slo_redirect_binding() uses ResponseLocation is any.
-    my $redirect = $self->_spid->_sp->slo_redirect_binding($self->_idp, 'SAMLResponse');
-    return $redirect->sign($xml);
+    $x->dataElement([$saml, 'Issuer'], $self->_spid->sp_entityid,
+        Format          => 'urn:oasis:names:tc:SAML:2.0:nameid-format:entity',
+        NameQualifier   => $self->_spid->sp_entityid,
+    );
+    
+    if ($args{signature_template}) {
+        $x->raw($self->_signature_template($self->ID));
+    }
+    
+    $x->startTag([$samlp, 'Status']);
+    if ($self->status eq 'success') {
+        $x->dataElement([$samlp, 'StatusCode'], undef, Value => 'urn:oasis:names:tc:SAML:2.0:status:Success');
+    } elsif ($self->status eq 'failure') {
+        # FIXME: what should we send in this case?
+    } elsif ($self->status eq 'partial') {
+        # FIXME: is it correct to send PartialLogout in this case?
+        $x->startTag([$samlp, 'StatusCode'], undef, Value => 'urn:oasis:names:tc:SAML:2.0:status:Requester');
+        $x->dataElement([$samlp, 'StatusCode'], undef, Value => 'urn:oasis:names:tc:SAML:2.0:status:PartialLogout');
+        $x->endTag(); #StatusCode
+    }
+    $x->endTag(); #Status
+    
+    $x->endTag(); #LogoutResponse
+    $x->end();
+    
+    return $x->to_string;
 }
 
-# Returns 'success', 'partial', or 0.
-sub success {
-    my ($self) = @_;
+sub redirect_url {
+    my ($self, %args) = @_;
     
-    return $self->_logoutres->substatus eq $self->_logoutres->status_uri('partial')
-        ? 'partial'
-        : $self->_logoutres->success ? 'success' : 0;
+    # TODO: use ResponseLocation if any
+    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
+        or croak "No HTTP-POST binding is available for Single Logout";
+    return $self->SUPER::redirect_url($url, %args);
+}
+
+sub post_form {
+    my ($self, %args) = @_;
+    
+    # TODO: use ResponseLocation if any
+    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST')
+        or croak "No HTTP-POST binding is available for Single Logout";
+    return $self->SUPER::post_form($url, %args);
 }
 
 1;
@@ -43,26 +76,20 @@ sub success {
 
     use Net::SPID;
     
-    # initialize our SPID object
-    my $spid = Net::SPID->new(...);
-    
     # generate a LogoutResponse
     my $logoutres = $idp->logoutresponse(
         status          => 'success',
         in_response_to  => $logoutreq->id,
     );
-    my $url = $logoutreq->redirect_url;
-    
-    # parse a LogoutResponse
-    my $logutres = $spid->parse_logoutresponse;
+    my $url = $logoutres->redirect_url;
 
 =head1 ABSTRACT
 
-This class represents a LogoutResponse. You may need to parse such a response in case you initiated a logout procedure on behalf of your user and you're getting the result from the Identity Provider, or you may need to generate a logout response in case the user initiated a logout procedure elsewhere and an Identity Provider is requested logout to you.
+This class represents an outgoing LogoutResponse. You need to craft such a response in case you received a LogoutRequest from the Identity Provider, thus during an IdP-initiated logout.
 
 =head1 CONSTRUCTOR
 
-This class is not supposed to be instantiated directly. You can get one by calling L<Net::SPID::SAML::IdP/logoutresponse> or L<Net::SPID::SAML/parse_logoutresponse>.
+This class is not supposed to be instantiated directly. You can get one by calling L<Net::SPID::SAML::IdP/logoutresponse> on the L<Net::SPID::SAML::IdP> object or by calling L<Net::SPID::SAML::In::LogoutRequest/make_response> on the L<Net::SPID::SAML::In::LogoutRequest>.
 
 =head1 METHODS
 
@@ -77,6 +104,12 @@ This method returns the raw message in XML format (signed).
 This method returns the full URL of the Identity Provider where user should be redirected in order to continue their Single Logout. In SAML words, this implements the HTTP-Redirect binding.
 
     my $url = $logoutres->redirect_url;
+
+=head2 post_form
+
+This method returns an HTML page with a JavaScript auto-post command that submits the request to the Identity Provider in order to complete their Single Logout. In SAML words, this implements the HTTP-POST binding.
+
+    my $html = $logoutres->post_form;
 
 =head2 success
 

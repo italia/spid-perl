@@ -131,21 +131,21 @@ get '/logout' => sub {
 };
 
 # This endpoint exposes a SingleLogoutService for our Service Provider, using
-# a HTTP-POST or HTTP-Redirect binding (it does not support SOAP).
+# a HTTP-POST or HTTP-Redirect binding (Net::SPID does not support SOAP).
 # Identity Providers can direct both LogoutRequest and LogoutResponse messages
 # to this endpoint.
-post '/spid-slo' => sub {
+any '/spid-slo' => sub {
     if (param('SAMLResponse') && session('spid_logoutreq_id')) {
-        my $response = eval {
+        # This is the response to a SP-initiated logout.
+        
+        # Parse the response and catch validation errors.
+        my $logoutres = eval {
             $spid->parse_logoutresponse(
                 param('SAMLResponse'),
-                undef,
+                request->uri,
                 session('spid_logoutreq_id'),
             )
         };
-    
-        # Clear the ID of the outgoing LogoutRequest, regardless of whether we accept the response or not.
-        session 'spid_logoutreq_id' => undef;
         
         if ($@) {
             warning "Bad LogoutResponse received: $@";
@@ -155,7 +155,8 @@ post '/spid-slo' => sub {
         }
         
         # Logout was successful! Clear the local session.
-        session 'spid_session' => undef;
+        session 'spid_logoutreq_id' => undef;
+        session 'spid_session'      => undef;
         
         # TODO: handle partial logout. Log? Show message to user?
         # if ($response->status eq 'partial') { ... }
@@ -163,8 +164,10 @@ post '/spid-slo' => sub {
         # Redirect user back to main page.
         redirect '/';
     } elsif (param 'SAMLRequest') {
-        my $request = eval {
-            $spid->parse_logoutrequest(param 'SAMLRequest')
+        # This is a LogoutRequest (IdP-initiated logout).
+        
+        my $logoutreq = eval {
+            $spid->parse_logoutrequest(param('SAMLRequest'), request->uri)
         };
         
         if ($@) {
@@ -181,20 +184,17 @@ post '/spid-slo' => sub {
         # retrieving another session by SPID session ID is tricky without a more
         # complex architecture.
         my $status = 'success';
-        if ($request->session eq session->{spid_session}->session) {
+        if ($logoutreq->SessionIndex eq session->{spid_session}->session_index) {
             session 'spid_session' => undef;
         } else {
             $status = 'partial';
             warning sprintf "SAML LogoutRequest session (%s) does not match current SPID session (%s)",
-                $request->session, session->{spid_session}->session;
+                $logoutreq->SessionIndex, session->{spid_session}->session_index;
         }
         
         # Craft a LogoutResponse and send it back to the Identity Provider.
-        my $idp = $spid->get_idp($request->issuer);
-        my $response = $idp->logoutresponse(in_response_to => $request->id, status => $status);
-    
-        # Redirect user to the Identity Provider; it will continue handling the logout process.
-        redirect $response->redirect_url, 302;
+        my $logoutres = $logoutreq->make_response(status => $status);
+        redirect $logoutres->redirect_url, 302;
     } else {
         status 400;
     }

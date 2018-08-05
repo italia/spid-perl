@@ -3,7 +3,7 @@ use Moo;
 
 extends 'Net::SPID::SAML::Out::Base';
 
-has 'session'       => (is => 'ro', required => 1);
+has 'session' => (is => 'ro', required => 1);
 
 use Carp;
 
@@ -35,23 +35,19 @@ sub xml {
         Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient',
         NameQualifier => $self->_idp->entityid);
     
-    $x->dataElement([$samlp, 'SessionIndex'], $self->session->session);
+    $x->dataElement([$samlp, 'SessionIndex'], $self->session->session_index);
     
     $x->endTag(); #LogoutRequest
     $x->end();
     
-    my $xml = $x->to_string;
-    
-    # TODO: if we're using HTTP-POST, sign this document
-    
-    return $xml;
+    return $x->to_string;
 }
 
 sub redirect_url {
     my ($self, %args) = @_;
     
     my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
-        or croak "No HTTP-POST binding is available for Single Logout";
+        or croak "No HTTP-Redirect binding is available for Single Logout";
     return $self->SUPER::redirect_url($url, %args);
 }
 
@@ -93,7 +89,7 @@ This class is not supposed to be instantiated directly. You can craft a LogoutRe
 
 =head2 xml
 
-This method generates the message in XML format (signed, if using the HTTP-POST binding).
+This method generates the message in XML format.
 
     my $xml = $logoutreq->xml;
 
@@ -107,7 +103,7 @@ This method returns the full URL of the Identity Provider where user should be r
 
 This method returns an HTML page with a JavaScript auto-post command that submits the request to the Identity Provider in order to initiate their Single Logout. In SAML words, this implements the HTTP-POST binding.
 
-    my $url = $authnreq->post_form;
+    my $html = $logoutreq->post_form;
 
 =cut
 
