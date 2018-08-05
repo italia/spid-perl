@@ -31,7 +31,7 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->sso_url($args{binding}),
+        Destination     => $self->_idp->sso_urls->{$args{binding}},
         ForceAuthn      => ($self->level > 1) ? 'true' : 'false',
     };
     if (defined (my $acs_url = $self->acs_url // $self->_spid->sp_acs_url)) {
@@ -71,7 +71,7 @@ sub xml {
 sub redirect_url {
     my ($self, %args) = @_;
     
-    my $url = $self->_idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
+    my $url = $self->_idp->sso_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'}
         or croak "No HTTP-Redirect binding is available for Single Sign-On";
     return $self->SUPER::redirect_url($url, %args);
 }
@@ -79,7 +79,7 @@ sub redirect_url {
 sub post_form {
     my ($self, %args) = @_;
     
-    my $url = $self->_idp->sso_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST')
+    my $url = $self->_idp->sso_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST'}
         or croak "No HTTP-POST binding is available for Single Sign-On";
     return $self->SUPER::post_form($url, %args);
 }

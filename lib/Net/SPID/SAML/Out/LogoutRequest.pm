@@ -18,7 +18,7 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->slo_url($args{binding}),
+        Destination     => $self->_idp->sloreq_urls->{$args{binding}},
     };
     $x->startTag([$samlp, 'LogoutRequest'], %$req_attrs);
     
@@ -33,7 +33,7 @@ sub xml {
     
     $x->dataElement([$saml, 'NameID'], $self->session->nameid, 
         Format => 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient',
-        NameQualifier => $self->_idp->entityid);
+        NameQualifier => $self->_idp->entityID);
     
     $x->dataElement([$samlp, 'SessionIndex'], $self->session->session_index);
     
@@ -46,7 +46,7 @@ sub xml {
 sub redirect_url {
     my ($self, %args) = @_;
     
-    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
+    my $url = $self->_idp->sloreq_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'}
         or croak "No HTTP-Redirect binding is available for Single Logout";
     return $self->SUPER::redirect_url($url, %args);
 }
@@ -54,7 +54,7 @@ sub redirect_url {
 sub post_form {
     my ($self, %args) = @_;
     
-    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST')
+    my $url = $self->_idp->sloreq_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST'}
         or croak "No HTTP-POST binding is available for Single Logout";
     return $self->SUPER::post_form($url, %args);
 }

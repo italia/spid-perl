@@ -103,7 +103,7 @@ sub load_idp_from_xml {
         xml     => $xml,
         cacert  => $self->cacert_file,
     );
-    $self->_idp->{$idp->entityid} = $idp;
+    $self->_idp->{$idp->entityID} = $idp;
     
     if ($self->cacert_file) {
         # TODO: verify IdP certificate and return 0 if invalid

@@ -19,7 +19,7 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->slo_url($args{binding}),
+        Destination     => $self->_idp->slores_urls->{$args{binding}},
         InResponseTo    => $self->in_response_to,
     };
     $x->startTag([$samlp, 'LogoutResponse'], %$req_attrs);
@@ -56,7 +56,7 @@ sub redirect_url {
     my ($self, %args) = @_;
     
     # TODO: use ResponseLocation if any
-    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
+    my $url = $self->_idp->slores_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'}
         or croak "No HTTP-POST binding is available for Single Logout";
     return $self->SUPER::redirect_url($url, %args);
 }
@@ -65,7 +65,7 @@ sub post_form {
     my ($self, %args) = @_;
     
     # TODO: use ResponseLocation if any
-    my $url = $self->_idp->slo_url('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST')
+    my $url = $self->_idp->slores_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST'}
         or croak "No HTTP-POST binding is available for Single Logout";
     return $self->SUPER::post_form($url, %args);
 }

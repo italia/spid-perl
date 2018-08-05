@@ -1,11 +1,66 @@
 package Net::SPID::SAML::IdP;
 use Moo;
 
-extends 'Net::SAML2::IdP';
 has '_spid' => (is => 'ro', required => 1, weak_ref => 1);  # Net::SPID::SAML
+
+has 'xml'           => (is => 'ro', required => 1);
+has 'entityID'      => (is => 'ro', required => 1);
+has 'cert'          => (is => 'ro', required => 1);
+has 'sso_urls'      => (is => 'ro', default => sub { {} });
+has 'sloreq_urls'   => (is => 'ro', default => sub { {} });
+has 'slores_urls'   => (is => 'ro', default => sub { {} });
 
 use Carp;
 use Crypt::OpenSSL::X509;
+use Mojo::XMLSig;
+use XML::XPath;
+
+sub new_from_xml {
+    my ($class, %args) = @_;
+
+    my $xpath = XML::XPath->new(xml => $args{xml});
+    $xpath->set_namespace('md', 'urn:oasis:names:tc:SAML:2.0:metadata');
+    $xpath->set_namespace('ds', 'http://www.w3.org/2000/09/xmldsig#');
+    
+    if ($xpath->findnodes('/md:EntityDescriptor/dsig:Signature')->size > 0) {
+        # TODO: validate certificate against a known CA
+        Mojo::XMLSig::verify($args{xml})
+            or croak "Signature verification failed";
+    }
+    
+    $args{entityID} = $xpath->findvalue('/md:EntityDescriptor/@entityID')->value;
+    
+    $args{sso_urls} //= {};
+    for my $sso ($xpath->findnodes('/md:EntityDescriptor/md:IDPSSODescriptor/md:SingleSignOnService')){
+        my $binding = $sso->getAttribute('Binding');
+        $args{sso_urls}{$binding} = $sso->getAttribute('Location');
+    }
+
+    $args{sloreq_urls} //= {};
+    $args{slores_urls} //= {};
+    for my $slo ($xpath->findnodes('/md:EntityDescriptor/md:IDPSSODescriptor/md:SingleLogoutService')) {
+        my $binding = $slo->getAttribute('Binding');
+        $args{sloreq_urls}{$binding} = $slo->getAttribute('Location');
+        $args{slores_urls}{$binding} = $slo->getAttribute('Location') // $slo->getAttribute('ResponseLocation');
+    }
+    
+    for my $certnode ($xpath->findnodes('/md:EntityDescriptor/md:IDPSSODescriptor/md:KeyDescriptor[@use="signing"]/ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')) {
+        my $cert = $certnode->getValue;
+        
+        # rewrap the base64 data from the metadata; it may not
+        # be wrapped at 64 characters as PEM requires
+        $cert =~ s/\s//g;
+        $cert = join "\n", $cert =~ /.{1,64}/gs;
+        
+        # form a PEM certificate
+        $args{cert} = Crypt::OpenSSL::X509->new_from_string(
+            "-----BEGIN CERTIFICATE-----\n$cert\n-----END CERTIFICATE-----\n",
+            Crypt::OpenSSL::X509::FORMAT_PEM,
+        );
+    }
+
+    return $class->new(%args);
+}
 
 sub authnrequest {
     my ($self, %args) = @_;
@@ -34,18 +89,6 @@ sub logoutresponse {
         _spid       => $self->_spid,
         _idp        => $self,
         %args,
-    );
-}
-
-sub cert {
-    my ($self) = @_;
-    
-    # legacy, until we ditch Net::SAML2
-    return $self->SUPER::cert('signing') if caller =~ /^Net::SAML2/;
-    
-    return Crypt::OpenSSL::X509->new_from_string(
-        $self->SUPER::cert('signing'),
-        Crypt::OpenSSL::X509::FORMAT_PEM,
     );
 }
 
@@ -78,7 +121,15 @@ This class represents an Identity Provider.
 
 =head1 CONSTRUCTOR
 
-This method is not supposed to be instantiated directly. Use the C<Net::SPID::SAML/get_idp> method in L<Net::SPID::SAML>.
+=head2 new_from_xml
+
+This constructor takes the metadata in XML form and parses it into a Net::SPID::SAML::IdP object:
+
+    my $idp = Net::SPID::SAML::IdP->new_from_xml(xml => $xml);
+
+If the metadata is signed, this method will croak in case the signature is not valid.
+
+Note that you don't usually need to construct this object manually. You load metadata using the methods offered by L<Net::SPID::SAML> and then you retrieve the IdP you need using L<Net::SPID::SAML/get_idp>.
 
 =head1 METHODS
 
