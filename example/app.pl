@@ -9,14 +9,11 @@
 use Dancer2;
 use Net::SPID;
 
-# Initialize our Net::SPID object with information about this SP and the
-# CA certificate used for validation of IdP certificates (if cacert_file
-# is omitted, CA validation is skipped).
+# Initialize our Net::SPID object with information about this SP.
 my $spid = Net::SPID->new(
     sp_entityid     => 'https://www.prova.it/',
     sp_key_file     => 'sp.key',
     sp_cert_file    => 'sp.pem',
-    #cacert_file     => 'cacert.pem',
 );
 
 # Load Identity Providers from their XML metadata.

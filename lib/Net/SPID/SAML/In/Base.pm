@@ -19,10 +19,12 @@ has 'Issuer' => (is => 'lazy', builder => sub {
 has 'relaystate' => (is => 'ro');
 
 use Carp qw(croak);
+use Crypt::OpenSSL::RSA;
 use IO::Uncompress::RawInflate qw(rawinflate);
 use MIME::Base64 qw(decode_base64);
 use XML::XPath;
 use URI;
+use URI::QueryParam;
 
 sub BUILDARGS {
     my ($class, %args) = @_;

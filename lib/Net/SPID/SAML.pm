@@ -6,7 +6,6 @@ use Crypt::OpenSSL::RSA;
 use Crypt::OpenSSL::X509;
 use File::Slurp qw(read_file);
 use MIME::Base64 qw(decode_base64);
-use Net::SAML2;
 use Net::SPID::SAML::IdP;
 use Net::SPID::SAML::In::Assertion;
 use Net::SPID::SAML::In::LogoutRequest;
@@ -22,28 +21,11 @@ has 'sp_cert_file'  => (is => 'ro', required => 1);
 has 'sp_acs_url'    => (is => 'ro', required => 0);
 has 'sp_acs_index'  => (is => 'ro', required => 0);
 has 'sp_attr_index' => (is => 'ro', required => 0);
-has 'cacert_file'   => (is => 'ro', required => 0);
 has '_idp'          => (is => 'ro', default => sub { {} });
-has '_sp'           => (is => 'lazy');
 has 'sp_key'        => (is => 'lazy');
 has 'sp_cert'       => (is => 'lazy');
 
 extends 'Net::SPID';
-
-sub _build__sp {
-    my ($self) = @_;
-    
-    return Net::SAML2::SP->new(
-        id               => $self->sp_entityid,
-        url              => 'xxx',
-        key              => $self->sp_key_file,
-        cert             => $self->sp_cert_file,
-        cacert           => $self->cacert_file,
-        org_name         => 'xxx',
-        org_display_name => 'xxx',
-        org_contact      => 'xxx',
-    );
-}
 
 sub _build_sp_key {
     my ($self) = @_;
@@ -101,13 +83,8 @@ sub load_idp_from_xml {
     my $idp = Net::SPID::SAML::IdP->new_from_xml(
         _spid   => $self,
         xml     => $xml,
-        cacert  => $self->cacert_file,
     );
     $self->_idp->{$idp->entityID} = $idp;
-    
-    if ($self->cacert_file) {
-        # TODO: verify IdP certificate and return 0 if invalid
-    }
     
     return 1;
 }

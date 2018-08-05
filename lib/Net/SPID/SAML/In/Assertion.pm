@@ -41,6 +41,7 @@ has 'attributes' => (is => 'lazy', builder => sub {
 });
 
 use Carp;
+use Crypt::OpenSSL::RSA;
 use DateTime;
 use DateTime::Format::XSD;
 use Mojo::XMLSig;

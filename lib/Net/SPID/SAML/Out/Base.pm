@@ -14,6 +14,7 @@ use MIME::Base64 qw(encode_base64);
 use Mojo::XMLSig;
 use XML::Writer;
 use URI;
+use URI::QueryParam;
 
 sub _build_ID {
     my ($self) = @_;
