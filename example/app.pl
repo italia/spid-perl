@@ -121,7 +121,8 @@ post '/spid-sso' => sub {
         redirect '/';
     } else {
         content_type 'text/plain';
-        return "Authentication Failed: " . $response->StatusCode;
+        return sprintf "Authentication Failed: %s (%s)",
+            $response->StatusMessage, $response->StatusCode2;
     }
 };
 

@@ -11,6 +11,8 @@ my %fields = qw(
     Assertion_InResponseTo  /samlp:Response/saml:Assertion/saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@InResponseTo
     Assertion_Recipient     /samlp:Response/saml:Assertion/saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@Recipient
     StatusCode              /samlp:Response/samlp:Status/samlp:StatusCode/@Value
+    StatusCode2             /samlp:Response/samlp:Status/samlp:StatusCode/samlp:StatusCode/@Value
+    StatusMessage           /samlp:Response/samlp:Status/samlp:StatusMessage/text()
 );
 
 # generate accessors for all the above fields
