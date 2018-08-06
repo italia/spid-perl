@@ -33,13 +33,12 @@ sub validate {
     # otherwise validate $args{URL}
     $self->_validate_post_or_redirect($args{URL});
     
-    # TODO: make this check required (and update the checklist in README)
-    if (defined $args{in_response_to}) {
-        my $in_response_to = $xpath->findvalue('/samlp:LogoutResponse/@InResponseTo')->value;
-        croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
-            $in_response_to, $args{in_response_to}
-            if $in_response_to ne $args{in_response_to};
-    }
+    croak "Missing 'in_response_to' argument for validate()"
+        if !defined $args{in_response_to};
+    
+    croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
+        $self->InResponseTo, $args{in_response_to}
+        if $self->InResponseTo ne $args{in_response_to};
     
     croak sprintf "Invalid Destination: '%s'", $self->Destination
         if !grep { $_ eq $self->Destination } keys %{$self->_spid->sp_singlelogoutservice};
@@ -79,10 +78,12 @@ This method returns the raw message in XML format.
 
 This method performs validation of the incoming message according to the SPID rules. In case of success it returns a true value; in case of failure it will die with the relevant error.
 
-    eval { $logoutres->validate };
+    eval { $logoutres->validate(in_response_to => $logout_req_ID) };
     if ($@) {
         warn "Bad LogoutResponse: $@";
     }
+
+The C<in_response_to> argument is required in order to perform the mandatory security check.
 
 =head2 status
 

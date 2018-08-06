@@ -361,7 +361,7 @@ A second argument can be supplied, containing the C<ID> of the request message; 
 This method accepts a XML payload and parses it as a LogoutResponse, returning a L<Net::SPID::SAML::LogoutResponse> object. Validation is performed automatically by calling the C<validate()> method, so this method may throw an exception.
 The XML payload can be supplied also in Base64-encoded form, thus you can supply the value of C<SAMLResponse> parameter directly.
 In case the LogoutResponse was supplied through a HTTP-Redirect binding (in other words, via GET), the request URI (inclusive of the query string) must be supplied as second argument. This is used for signature validation. If HTTP-POST was used the second argument is ignored.
-A third argument can be supplied, containing the C<ID> of the request message; in this case validation will also check the C<InResponseTo> attribute.
+A third argument must be supplied, containing the C<ID> of the request message; this is used for the mandatory security check of the C<InResponseTo> attribute.
 
     my $response = $spid->parse_logoutresponse($xml, $url, $request_id);
 

@@ -3,6 +3,10 @@ use Moo;
 
 extends 'Net::SPID::SAML::In::Base';
 
+has 'AssertionIssuer' => (is => 'lazy', builder => sub {
+    $_[0]->xpath->findvalue('/samlp:Response/saml:Assertion/saml:Issuer')->value
+});
+
 has 'NotBefore' => (is => 'lazy', builder => sub {
     DateTime::Format::XSD->parse_datetime
         ($_[0]->xpath->findvalue('//saml:Conditions/@NotBefore')->value)
@@ -55,13 +59,16 @@ sub validate {
     
     # TODO: validate IssueInstant
     
-    {
-        my $response_issuer  = $xpath->findvalue('/samlp:Response/saml:Issuer')->value;
-        my $assertion_issuer = $xpath->findvalue('//saml:Assertion/saml:Issuer')->value;
+    croak "Missing 'in_response_to' argument for validate()"
+        if !defined $args{in_response_to};
     
-        croak "Response/Issuer ($response_issuer) does not match Assertion/Issuer ($assertion_issuer)"
-            if $response_issuer ne $assertion_issuer;
-    }
+    croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
+        $self->InResponseTo, $args{in_response_to}
+        if $self->InResponseTo ne $args{in_response_to};
+    
+    croak sprintf "Response/Issuer (%s) does not match Assertion/Issuer (%s)",
+        $self->Issuer, $self->AssertionIssuer
+        if $self->Issuer ne $self->AssertionIssuer;
     
     # this validates all the signatures in the given XML, and requires that at least one exists
     my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
@@ -113,7 +120,7 @@ sub validate {
             if !grep { $_ eq $recipient } @{$self->_spid->sp_assertionconsumerservice};
         
         croak "Mismatch between Destination and SubjectConfirmationData/\@Recipient"
-            if $destination ne $recipient;
+            if $self->Destination ne $recipient;
     }
     
     return 1;

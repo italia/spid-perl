@@ -16,6 +16,10 @@ has 'Destination' => (is => 'lazy', builder => sub {
     $_[0]->xpath->findvalue('/*/@Destination')->value
 });
 
+has 'InResponseTo' => (is => 'lazy', builder => sub {
+    $_[0]->xpath->findvalue('/*/@InResponseTo')->value
+});
+
 has 'Issuer' => (is => 'lazy', builder => sub {
     $_[0]->xpath->findvalue('/*/saml:Issuer')->value
 });
