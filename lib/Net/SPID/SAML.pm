@@ -7,9 +7,9 @@ use Crypt::OpenSSL::X509;
 use File::Slurp qw(read_file);
 use MIME::Base64 qw(decode_base64);
 use Net::SPID::SAML::IdP;
-use Net::SPID::SAML::In::Assertion;
 use Net::SPID::SAML::In::LogoutRequest;
 use Net::SPID::SAML::In::LogoutResponse;
+use Net::SPID::SAML::In::Response;
 use Net::SPID::SAML::Out::AuthnRequest;
 use Net::SPID::SAML::Out::LogoutRequest;
 use Net::SPID::SAML::Out::LogoutResponse;
@@ -102,10 +102,10 @@ sub get_idp {
     return $self->_idp->{$idp_entityid};
 }
 
-sub parse_assertion {
+sub parse_response {
     my ($self, $payload, $in_response_to) = @_;
     
-    my $a = Net::SPID::SAML::In::Assertion->new(
+    my $a = Net::SPID::SAML::In::Response->new(
         _spid       => $self,
         base64      => $payload,
     );
@@ -349,9 +349,9 @@ This method accepts an entityID and returns the corresponding L<Net::SPID::SAML:
 
     my $idp = $spid->get_idp('https://www.prova.it/');
 
-=head2 parse_assertion
+=head2 parse_response
 
-This method accepts a XML payload and parses it as a Response/Assertion, returning a L<Net::SPID::SAML::In::Assertion> object. Validation is performed (see the documentation for the L<Net::SPID::SAML::In::Assertion/validate> method), so this method may throw an exception.
+This method accepts a XML payload and parses it as a Response/Assertion, returning a L<Net::SPID::SAML::In::Response> object. Validation is performed (see the documentation for the L<Net::SPID::SAML::In::Response/validate> method), so this method may throw an exception.
 A second argument can be supplied, containing the C<ID> of the request message; in this case validation will also check the C<InResponseTo> attribute.
 
     my $assertion = $spid->parse_assertion($xml, $request_id);

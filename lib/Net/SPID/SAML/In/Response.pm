@@ -1,4 +1,4 @@
-package Net::SPID::SAML::In::Assertion;
+package Net::SPID::SAML::In::Response;
 use Moo;
 
 extends 'Net::SPID::SAML::In::Base';
@@ -159,7 +159,7 @@ sub spid_session {
     
     # parse a response from an Identity Provider and validate it
     my $assertion = eval {
-        $spid->parse_assertion($saml_response_xml, $authnreq_id);
+        $spid->parse_response($saml_response_xml, $authnreq_id);
     };
     die "Invalid assertion: $@" if $@;
     
@@ -175,7 +175,7 @@ This class represents an incoming SPID Response/Assertion message. We get such m
 
 =head1 CONSTRUCTOR
 
-This class is not supposed to be instantiated directly. It is returned by L<Net::SPID::SAML/parse_assertion>.
+This class is not supposed to be instantiated directly. It is returned by L<Net::SPID::SAML/parse_response>.
 
 =head1 METHODS
 

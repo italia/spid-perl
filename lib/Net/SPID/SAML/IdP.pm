@@ -178,7 +178,7 @@ The following arguments can be supplied to C<logoutrequest()>:
 
 =item I<session_index>
 
-The L<Net::SPID::Session> object (originally returned by L<Net::SPID::SAML/parse_assertion> through a L<Net::SPID::SAML::In::Assertion> object) representing the SPID session to close.
+The L<Net::SPID::Session> object (originally returned by L<Net::SPID::SAML/parse_response> through a L<Net::SPID::SAML::In::Response> object) representing the SPID session to close.
 
 =back
 

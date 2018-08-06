@@ -76,8 +76,8 @@ get '/spid-login' => sub {
 post '/spid-sso' => sub {
     # Parse and verify the incoming assertion. This may throw exceptions so we
     # enclose it in an eval {} block.
-    my $assertion = eval {
-        $spid->parse_assertion(
+    my $response = eval {
+        $spid->parse_response(
             param('SAMLResponse'),
             session('spid_authnreq_id'),  # Match the ID of our authentication request for increased security.
         );
@@ -93,27 +93,27 @@ post '/spid-sso' => sub {
     # - unavailable SPID level
     
     # In case of SSO failure, display an error page.
-    if (!$assertion) {
+    if (!$response) {
         warning "Bad Assertion received: $@";
         status 400;
         content_type 'text/plain';
         return "Bad Assertion: $@";
     }
     
-    # Log assertion as required by the SPID rules.
+    # Log response as required by the SPID rules.
     # TODO: log it in a way that does not mangle whitespace preventing signature from 
     # being verified at a later time
-    info "SPID Assertion: " . $assertion->xml;
+    info "SPID Response: " . $response->xml;
     
-    if ($assertion->success) {
+    if ($response->success) {
         # Login successful! Initialize our application session and store
         # the SPID information for later retrieval.
-        # $assertion->spid_session is a Net::SPID::Session object which is a
+        # $response->spid_session is a Net::SPID::Session object which is a
         # simple hashref thus it's easily serializable.
         # TODO: this should be stored in a database instead of the current Dancer
         # session, and it should be indexed by SPID SessionID so that we can delete
         # it when we get a LogoutRequest from an IdP.
-        session 'spid_session' => $assertion->spid_session;
+        session 'spid_session' => $response->spid_session;
     
         # TODO: handle SPID level upgrade:
         # - does session ID remain the same? better assume it changes
@@ -121,7 +121,7 @@ post '/spid-sso' => sub {
         redirect '/';
     } else {
         content_type 'text/plain';
-        return "Authentication Failed: " . $assertion->StatusCode;
+        return "Authentication Failed: " . $response->StatusCode;
     }
 };
 
