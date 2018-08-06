@@ -8,21 +8,19 @@ has 'xml'   => (is => 'ro', required => 1);
 has 'url'   => (is => 'ro', required => 0);
 has 'xpath' => (is => 'lazy');
 
-has 'ID' => (is => 'lazy', builder => sub {
-    $_[0]->xpath->findvalue('/*/@ID')->value
-});
+my %fields = qw(
+    ID              /*/@ID
+    Destination     /*/@Destination
+    InResponseTo    /*/@InResponseTo
+    Issuer          /*/saml:Issuer
+);
 
-has 'Destination' => (is => 'lazy', builder => sub {
-    $_[0]->xpath->findvalue('/*/@Destination')->value
-});
-
-has 'InResponseTo' => (is => 'lazy', builder => sub {
-    $_[0]->xpath->findvalue('/*/@InResponseTo')->value
-});
-
-has 'Issuer' => (is => 'lazy', builder => sub {
-    $_[0]->xpath->findvalue('/*/saml:Issuer')->value
-});
+# generate accessors for all the above fields
+foreach my $f (keys %fields) {
+    has $f => (is => 'lazy', builder => sub {
+        $_[0]->xpath->findvalue($fields{$f})->value
+    });
+}
 
 has 'relaystate' => (is => 'ro');
 
