@@ -102,7 +102,6 @@ On top of this module, plugins for web frameworks can be developed in order to a
 ## Repository layout
 
 * [example/](example/) contains a demo application based on Dancer2
-* [lib/Net/SAML2.pm](lib/Net/SAML2.pm) and [lib/Net/SAML2/](lib/Net/SAML2/) contain a forked and improved version of [Net::SAML2](https://metacpan.org/pod/Net::SAML2) (the original module on CPAN is currently unmaintained, so until someone can take over its maintainance we are shipping a more complete one here)
 * [lib/Net/SPID.pm](lib/Net/SPID.pm) contains the source code of the Net::SPID module, which is just a wrapper around Net::SPID::SAML and Net::SPID::OpenID
 * [t/](t/) contains the test suite
 
