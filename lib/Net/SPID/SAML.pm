@@ -57,7 +57,7 @@ sub get_button {
     
     my $html = '';
     foreach my $idp_id (sort keys %{$self->_idp}) {
-        $html .= sprintf qq!<p><a href="%s">Log In (%s)</a></p>\n!,
+        $html .= sprintf qq!<p><a class="btn btn-primary" href="%s">Login with SPID</a> <small>(%s)</small></p>\n!,
             $url_cb->($idp_id), $idp_id;
     }
     return $html;
