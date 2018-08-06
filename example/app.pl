@@ -14,6 +14,15 @@ my $spid = Net::SPID->new(
     sp_entityid     => 'https://www.prova.it/',
     sp_key_file     => 'sp.key',
     sp_cert_file    => 'sp.pem',
+    sp_assertionconsumerservice => [
+        'http://localhost:3000/spid-sso',
+    ],
+    sp_singlelogoutservice => {
+        'http://localhost:3000/spid-slo' => 'HTTP-Redirect',
+    },
+    sp_attributeconsumingservice => [
+        { servicename => 'Service 1', attributes => [qw(fiscalNumber name familyName dateOfBirth)] },
+    ],
 );
 
 # Load Identity Providers from their XML metadata.
@@ -27,6 +36,12 @@ get '/' => sub {
     } else {
         template 'index', { spid => $spid };
     }
+};
+
+# This endpoint exposes our metadata.
+get '/metadata' => sub {
+    content_type 'application/xml';
+    return $spid->metadata;
 };
 
 # This endpoint initiates SSO through the user-chosen Identity Provider.

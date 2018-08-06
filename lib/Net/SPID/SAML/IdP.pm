@@ -150,15 +150,15 @@ The following arguments can be supplied to C<authnrequest()>:
 
 =item I<acs_url>
 
-The value to use for C<AssertionConsumerServiceURL> in AuthnRequest. This is the URL where the user will be redirected (via GET or POST) by the Identity Provider after Single Sign-On. This must be one of the URLs contained in our Service Provider metadata. This is required if L<acs_index> is not set, but it can be omitted if the L<Net::SPID/sp_acs_url> option was set in L<Net::SPID>.
+The value to use for C<AssertionConsumerServiceURL> in AuthnRequest. This is the URL where the user will be redirected (via GET or POST) by the Identity Provider after Single Sign-On. This should be one of the URLs configured in the L<Net::SPID/sp_assertionconsumerservice> parameter at initialization time, otherwise the Response will not be validated. If omitted, the first configured one will be used.
 
 =item I<acs_index>
 
-The value to use for C<AssertionConsumerServiceIndex> in AuthnRequest. As an alternative to specifying the URL explicitely in each AuthnRequest using L<acs_url>, a numeric index referring to the URL(s) specified in the Service Provider metadata can be supplied. It can be omitted if the L<Net::SPID/sp_acs_index> option was set in L<Net::SPID>. This is required if L<acs_url> is not set, but it can be omitted if the L<Net::SPID/acs_index> option was set in L<Net::SPID>.
+The value to use for C<AssertionConsumerServiceIndex> in AuthnRequest. As an alternative to specifying the URL explicitely in each AuthnRequest using L<acs_url>, a numeric index referring to the URL(s) specified in the Service Provider metadata can be supplied. Make sure the corresponding URL is listed in the L<Net::SPID/sp_assertionconsumerservice> parameter, otherwise the response will not be validated.
 
 =item I<attr_index>
 
-(Optional.) The value to use for C<AttributeConsumingServiceIndex> in AuthnRequest. This refers to the C<AttributeConsumingService> specified in the Service Provider metadata. If omitted, the L<Net::SPID/sp_attr_index> option set in L<Net::SPID> will be used. If that was not set, no attributes will be requested at all.
+(Optional.) The value to use for C<AttributeConsumingServiceIndex> in AuthnRequest. This refers to the C<AttributeConsumingService> specified in the Service Provider metadata. If omitted, no attributes will be requested at all.
 
 =item I<level>
 

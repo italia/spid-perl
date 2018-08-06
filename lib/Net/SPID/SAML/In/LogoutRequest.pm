@@ -16,12 +16,10 @@ sub validate {
     # otherwise validate $args{URL}
     $self->_validate_post_or_redirect($args{URL});
     
-    # TODO: make this check required (and update the checklist in README)
-    if (exists $args{slo_url}) {
+    {
         my $destination  = $xpath->findvalue('/samlp:LogoutRequest/@Destination')->value;
-        croak "Invalid Destination: '%s' (expected: '%s')",
-            $destination, $args{slo_url},
-            if $destination ne $args{slo_url};
+        croak "Invalid Destination: '$destination'"
+            if !grep { $_ eq $destination } keys %{$self->_spid->sp_singlelogoutservice};
     }
     
     return 1;

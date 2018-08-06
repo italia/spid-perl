@@ -14,16 +14,17 @@ use Net::SPID::SAML::Out::AuthnRequest;
 use Net::SPID::SAML::Out::LogoutRequest;
 use Net::SPID::SAML::Out::LogoutResponse;
 use URI::Escape qw(uri_escape);
+use XML::Writer;
 
 has 'sp_entityid'   => (is => 'ro', required => 1);
 has 'sp_key_file'   => (is => 'ro', required => 1);
 has 'sp_cert_file'  => (is => 'ro', required => 1);
-has 'sp_acs_url'    => (is => 'ro', required => 0);
-has 'sp_acs_index'  => (is => 'ro', required => 0);
-has 'sp_attr_index' => (is => 'ro', required => 0);
-has '_idp'          => (is => 'ro', default => sub { {} });
 has 'sp_key'        => (is => 'lazy');
 has 'sp_cert'       => (is => 'lazy');
+has 'sp_assertionconsumerservice'   => (is => 'ro', required => 1);
+has 'sp_singlelogoutservice'        => (is => 'ro', required => 1);
+has 'sp_attributeconsumingservice'  => (is => 'ro', default => sub {[]});
+has '_idp'          => (is => 'ro', default => sub { {} });
 
 extends 'Net::SPID';
 
@@ -145,6 +146,78 @@ sub parse_logoutrequest {
     return $r;
 }
 
+sub metadata {
+    my ($self) = @_;
+    
+    my $md   = 'urn:oasis:names:tc:SAML:2.0:metadata';
+    my $dsig = 'http://www.w3.org/2000/09/xmldsig#';
+    my $x = XML::Writer->new( 
+        OUTPUT          => 'self', 
+        NAMESPACES      => 1,
+        PREFIX_MAP      => {
+            $md   => 'md',
+            $dsig => 'ds',
+        },
+    );
+    
+    my $ID = $self->sp_entityid;
+    $ID =~ s/[^a-z0-9_-]/_/g;
+    $x->startTag([$md, 'EntityDescriptor'],
+        entityID => $self->sp_entityid,
+        ID => $ID);
+    
+    $x->startTag([$md, 'SPSSODescriptor'],
+        protocolSupportEnumeration => 'urn:oasis:names:tc:SAML:2.0:protocol',
+        AuthnRequestsSigned => 'true',
+        WantAssertionsSigned => 'true');
+    
+    {
+        $x->startTag([$md, 'KeyDescriptor'], use => 'signing');
+        $x->startTag([$dsig, 'KeyInfo']);
+        $x->startTag([$dsig, 'X509Data']);
+        
+        my $cert = $self->sp_cert->as_string;
+        $cert =~ s/^-+BEGIN CERTIFICATE-+\n//;
+        $cert =~ s/\n-+END CERTIFICATE-+\n?//;
+        $x->dataElement([$dsig, 'X509Certificate'], $cert);
+        
+        $x->endTag(); #ds:X509Data
+        $x->endTag(); #ds:KeyInfo
+        $x->endTag(); #KeyDescriptor
+    }
+    $x->dataElement([$md, 'NameIDFormat'],
+        'urn:oasis:names:tc:SAML:2.0:nameid-format:transient');
+    
+    foreach my $acs_index (0..$#{$self->sp_assertionconsumerservice}) {
+        $x->emptyTag([$md, 'SingleSignOnService'],
+            Location => $self->sp_assertionconsumerservice->[$acs_index],
+            index => $acs_index,
+            isDefault => $acs_index ? 'false' : 'true');
+    }
+    
+    foreach my $url (keys %{$self->sp_singlelogoutservice}) {
+        my $binding = 'urn:oasis:names:tc:SAML:2.0:bindings:'
+            . $self->sp_singlelogoutservice->{$url};
+        $x->emptyTag([$md, 'SingleLogoutService'],
+            Location => $url,
+            Binding => $binding);
+    }
+    
+    foreach my $attr_index (0..$#{$self->sp_attributeconsumingservice}) {
+        my $attr = $self->sp_attributeconsumingservice->[$attr_index];
+        $x->startTag([$md, 'AttributeConsumingService'], index => $attr_index);
+        $x->dataElement([$md, 'ServiceName'], $attr->{servicename});
+        $x->dataElement([$md, 'RequestedAttribute'], $_)
+            for @{$attr->{attributes}};
+        $x->endTag();
+    }
+    
+    $x->endTag(); #SPSSODescriptor
+    $x->endTag(); #EntityDescriptor
+    
+    return $x->to_string;
+}
+
 1;
 
 =head1 SYNOPSIS
@@ -155,6 +228,12 @@ sub parse_logoutrequest {
         sp_entityid     => 'https://www.prova.it/',
         sp_key_file     => 'sp.key',
         sp_cert_file    => 'sp.pem',
+        sp_assertionconsumerservice => [
+            'http://localhost:3000/spid-sso',
+        ],
+        sp_singlelogoutservice => {
+            'http://localhost:3000/spid-slo' => 'HTTP-Redirect',
+        },
     );
     
     # load Identity Providers
@@ -203,17 +282,27 @@ The preferred way to instantiate this class is to call C<Net::SPID->new(protocol
 
 (Required.) The absolute or relative file path to our certificate file.
 
-=item I<sp_acs_url>
+=item I<sp_assertionconsumerservice>
 
-(Optional.) The default value to use for C<AssertionConsumerServiceURL> in AuthnRequest. This is the URL where the user will be redirected (via GET or POST) by the Identity Provider after Single Sign-On. This must be one of the URLs contained in our Service Provider metadata. Note that this can be overridden using the L</acs_url> argument when generating the AuthnRequest. Using this default value is only convenient when you have a simple application that only exposes a single C<AssertionConsumerService>.
+An arrayref with the URL(s) of our AssertionConsumerService endpoint(s). It is used for metadata generation and for validating the C<Destination> XML attribute of the incoming responses.
 
-=item I<sp_acs_index>
+=item I<sp_singlelogoutservice>
 
-(Optional.) The default value to use for C<AssertionConsumerServiceIndex> in AuthnRequest. As an alternative to specifying the URL explicitely in each AuthnRequest using L<sp_acs_url> or L<acs_url>, a numeric index referring to the URL(s) specified in the Service Provider metadata can be supplied. Note that this can be overridden using the L</acs_index> argument when generating the AuthnRequest. Using this default value is only convenient when you have a simple application that only exposes a single C<AssertionConsumerService>.
+A hashref with the URL(s) of our SingleLogoutService endpoint(s), along with the specification of the binding. It is used for metadata generation and for validating the C<Destination> XML attribute of the incoming responses.
 
-=item I<sp_attr_index>
+=item I<sp_attributeconsumingservice>
 
-(Optional.) The default value to use for C<AttributeConsumingServiceIndex> in AuthnRequest. This refers to the C<AttributeConsumingService> specified in the Service Provider metadata. Note that this can be overridden using the L</attr_index> argument when generating the AuthnRequest. Using this default value is only convenient when you have a simple application that only uses a single C<AttributeConsumingService>.
+(Optional.) An arrayref with the AttributeConsumingServices to list in metadata, each one described by a C<servicename> and a list of C<attributes>. This is optional as it's only used for metadata generation.
+
+    my $spid = Net::SPID->new(
+        ...
+        sp_attributeconsumingservice => [
+            {
+                servicename => 'Service 1',
+                attributes => [qw(fiscalNumber name familyName dateOfBirth)],
+            },
+        ],
+    );
 
 =back
 

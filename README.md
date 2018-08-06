@@ -18,7 +18,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |**Metadata:**||
 |parsing of IdP XML metadata (1.2.2.4)|✓|
 |parsing of AA XML metadata (2.2.4)||
-|SP XML metadata generation (1.3.2)||
+|SP XML metadata generation (1.3.2)|✓|
 |**AuthnRequest generation (1.2.2.1):**||
 |generation of AuthnRequest XML|✓|
 |HTTP-Redirect binding|✓|
@@ -34,12 +34,12 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |verification of `Signature` certificate (if any) against IdP/AA metadata|✓|
 |verification of `Assertion/Signature` value|✓|
 |verification of `Assertion/Signature` certificate against IdP/AA metadata|✓|
-|verification of `SubjectConfirmationData/@Recipient`| |
+|verification of `SubjectConfirmationData/@Recipient`|✓|
 |verification of `SubjectConfirmationData/@NotOnOrAfter`|✓|
 |verification of `SubjectConfirmationData/@InResponseTo`|✓|
 |verification of `Issuer`|✓|
 |verification of `Assertion/Issuer`|✓|
-|verification of `Destination`| |
+|verification of `Destination`|✓|
 |verification of `Conditions/@NotBefore`|✓|
 |verification of `Conditions/@NotOnOrAfter`|✓|
 |verification of `Audience`|✓|
@@ -60,14 +60,14 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |verification of `Response/Signature` value (if any)|✓|
 |verification of `Response/Signature` certificate (if any) against IdP metadata|✓|
 |verification of `Issuer`|✓|
-|verification of `Destination`| |
+|verification of `Destination`|✓|
 |PartialLogout detection|✓|
 |**LogoutRequest parsing (for third-party-initiated logout):**||
 |parsing of LogoutRequest XML|✓|
 |verification of `Response/Signature` value (if any)|✓|
 |verification of `Response/Signature` certificate (if any) against IdP metadata|✓|
 |verification of `Issuer`|✓|
-|verification of `Destination`| |
+|verification of `Destination`|✓|
 |parsing of `NameID`|✓|
 |**LogoutResponse generation (for third-party-initiated logout):**||
 |generation of LogoutResponse XML|✓|

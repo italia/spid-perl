@@ -11,15 +11,6 @@ has 'comparison'    => (is => 'rw', required => 0, default => sub { 'minimum' })
 
 use Carp qw(croak);
 
-sub BUILD {
-    my ($self) = @_;
-    
-    if (!grep defined, $self->acs_url, $self->_spid->sp_acs_url,
-        $self->acs_index, $self->_spid->sp_acs_index) {
-        croak "acs_url or acs_index are required\n";
-    }
-}
-
 sub xml {
     my ($self, %args) = @_;
     
@@ -34,15 +25,14 @@ sub xml {
         Destination     => $self->_idp->sso_urls->{$args{binding}},
         ForceAuthn      => ($self->level > 1) ? 'true' : 'false',
     };
-    if (defined (my $acs_url = $self->acs_url // $self->_spid->sp_acs_url)) {
+    if (defined (my $acs_url = $self->acs_url // $self->_spid->sp_assertionconsumerservice->[0])) {
         $req_attrs->{AssertionConsumerServiceURL} = $acs_url;
         $req_attrs->{ProtocolBinding} = 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST';
-    }
-    if (defined (my $acs_index = $self->acs_index // $self->_spid->sp_acs_index)) {
+    } elsif (defined (my $acs_index = $self->acs_index // 0)) {
         $req_attrs->{AssertionConsumerServiceIndex} = $acs_index;
     }
-    if (defined (my $attr_index = $self->attr_index // $self->_spid->sp_attr_index)) {
-        $req_attrs->{AttributeConsumingServiceIndex} = $attr_index;
+    if (defined $self->attr_index) {
+        $req_attrs->{AttributeConsumingServiceIndex} = $self->attr_index;
     }
     $x->startTag([$samlp, 'AuthnRequest'], %$req_attrs);
     

@@ -103,17 +103,18 @@ sub validate {
         $self->SubjectConfirmationData_NotOnOrAfter->iso8601, $now->iso8601
         if DateTime->compare($now, $self->SubjectConfirmationData_NotOnOrAfter) > -1;
     
-    # TODO: make this check required (and update the checklist in README)
-    if (exists $args{acs_url}) {
+    {
+        # Check Destination against known ACS URLs
         my $destination  = $xpath->findvalue('//samlp:Response/@Destination')->value;
-        croak "Invalid Destination: '%s' (expected: '%s')",
-            $destination, $args{acs_url},
-            if $destination ne $args{acs_url};
+        croak "Invalid Destination: '$destination'"
+            if !grep { $_ eq $destination } @{$self->_spid->sp_assertionconsumerservice};
         
         my $recipient  = $xpath->findvalue('//saml:SubjectConfirmationData/@Recipient')->value;
-        croak "Invalid SubjectConfirmationData/\@Recipient: '%s' (expected: '%s')",
-            $recipient, $args{acs_url},
-            if $recipient ne $args{acs_url};
+        croak "Invalid SubjectConfirmationData/\@Recipient'"
+            if !grep { $_ eq $recipient } @{$self->_spid->sp_assertionconsumerservice};
+        
+        croak "Mismatch between Destination and SubjectConfirmationData/\@Recipient"
+            if $destination ne $recipient;
     }
     
     return 1;
@@ -188,10 +189,6 @@ The following arguments are expected:
 =item I<in_response_to>
 
 This must be the ID of the AuthnRequest we sent, which you should store in the user's session in order to supply it to this method. It will be used for checking that the I<InResponseTo> field of the assertion matches our request.
-
-=item I<acs_url>
-
-This must be the URL of the AssertionConsumerService endpoint which received this assertion. It will be used for checking that it matches the I<Destination> value claimed in the assertion itself.
 
 =back
 
