@@ -105,9 +105,8 @@ sub validate {
     
     {
         # Check Destination against known ACS URLs
-        my $destination  = $xpath->findvalue('//samlp:Response/@Destination')->value;
-        croak "Invalid Destination: '$destination'"
-            if !grep { $_ eq $destination } @{$self->_spid->sp_assertionconsumerservice};
+        croak sprintf "Invalid Destination: '%s'", $self->Destination
+            if !grep { $_ eq $self->Destination } @{$self->_spid->sp_assertionconsumerservice};
         
         my $recipient  = $xpath->findvalue('//saml:SubjectConfirmationData/@Recipient')->value;
         croak "Invalid SubjectConfirmationData/\@Recipient'"

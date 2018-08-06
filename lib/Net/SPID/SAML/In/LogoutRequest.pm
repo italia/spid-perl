@@ -16,11 +16,8 @@ sub validate {
     # otherwise validate $args{URL}
     $self->_validate_post_or_redirect($args{URL});
     
-    {
-        my $destination  = $xpath->findvalue('/samlp:LogoutRequest/@Destination')->value;
-        croak "Invalid Destination: '$destination'"
-            if !grep { $_ eq $destination } keys %{$self->_spid->sp_singlelogoutservice};
-    }
+    croak sprintf "Invalid Destination: '%s'", $self->Destination
+        if !grep { $_ eq $self->Destination } keys %{$self->_spid->sp_singlelogoutservice};
     
     return 1;
 }

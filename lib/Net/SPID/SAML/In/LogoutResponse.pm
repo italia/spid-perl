@@ -41,11 +41,8 @@ sub validate {
             if $in_response_to ne $args{in_response_to};
     }
     
-    {
-        my $destination  = $xpath->findvalue('/samlp:LogoutResponse/@Destination')->value;
-        croak "Invalid Destination: '$destination'"
-            if !grep { $_ eq $destination } keys %{$self->_spid->sp_singlelogoutservice};
-    }
+    croak sprintf "Invalid Destination: '%s'", $self->Destination
+        if !grep { $_ eq $self->Destination } keys %{$self->_spid->sp_singlelogoutservice};
     
     return 1;
 }
