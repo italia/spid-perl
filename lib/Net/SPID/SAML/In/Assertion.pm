@@ -3,9 +3,21 @@ use Moo;
 
 extends 'Net::SPID::SAML::In::Base';
 
-has 'AssertionIssuer' => (is => 'lazy', builder => sub {
-    $_[0]->xpath->findvalue('/samlp:Response/saml:Assertion/saml:Issuer')->value
-});
+my %fields = qw(
+    NameID                  //saml:Subject/saml:NameID
+    SessionIndex            //saml:AuthnStatement/@SessionIndex
+    Assertion_Issuer        /samlp:Response/saml:Assertion/saml:Issuer
+    Assertion_Audience      //saml:Conditions/saml:AudienceRestriction/saml:Audience
+    Assertion_InResponseTo  //saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@InResponseTo
+    Assertion_Recipient     //saml:SubjectConfirmationData/@Recipient
+);
+
+# generate accessors for all the above fields
+foreach my $f (keys %fields) {
+    has $f => (is => 'lazy', builder => sub {
+        $_[0]->xpath->findvalue($fields{$f})->value
+    });
+}
 
 has 'NotBefore' => (is => 'lazy', builder => sub {
     DateTime::Format::XSD->parse_datetime
@@ -20,14 +32,6 @@ has 'NotOnOrAfter' => (is => 'lazy', builder => sub {
 has 'SubjectConfirmationData_NotOnOrAfter' => (is => 'lazy', builder => sub {
     DateTime::Format::XSD->parse_datetime
         ($_[0]->xpath->findvalue('//saml:SubjectConfirmationData/@NotOnOrAfter')->value)
-});
-
-has 'NameID' => (is => 'lazy', builder => sub {
-    $_[0]->xpath->findvalue('//saml:Subject/saml:NameID')->value
-});
-
-has 'SessionIndex' => (is => 'lazy', builder => sub {
-    $_[0]->xpath->findvalue('//saml:AuthnStatement/@SessionIndex')->value
 });
 
 has 'spid_level' => (is => 'lazy', builder => sub {
@@ -67,8 +71,20 @@ sub validate {
         if $self->InResponseTo ne $args{in_response_to};
     
     croak sprintf "Response/Issuer (%s) does not match Assertion/Issuer (%s)",
-        $self->Issuer, $self->AssertionIssuer
-        if $self->Issuer ne $self->AssertionIssuer;
+        $self->Issuer, $self->Assertion_Issuer
+        if $self->Issuer ne $self->Assertion_Issuer;
+    
+    # Check Destination against known ACS URLs
+    croak sprintf "Invalid Destination: '%s'", $self->Destination
+        if !grep { $_ eq $self->Destination } @{$self->_spid->sp_assertionconsumerservice};
+    
+    croak sprintf "Invalid Audience: '%s' (expected: '%s')",
+        $self->Assertion_Audience, $self->_spid->sp_entityid
+        if $self->Assertion_Audience ne $self->_spid->sp_entityid;
+    
+    croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
+        $self->Assertion_InResponseTo, $args{in_response_to}
+        if $self->Assertion_InResponseTo ne $args{in_response_to};
     
     # this validates all the signatures in the given XML, and requires that at least one exists
     my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
@@ -78,20 +94,6 @@ sub validate {
     # SPID regulations require that Assertion is signed, while Response can be not signed
     croak "Response/Assertion is not signed"
         if $xpath->findnodes('//saml:Assertion/dsig:Signature')->size == 0;
-    
-    {
-        my $audience = $xpath->findvalue('//saml:Conditions/saml:AudienceRestriction/saml:Audience')->value;
-        croak sprintf "Invalid Audience: '%s' (expected: '%s')",
-            $audience, $self->_spid->sp_entityid
-            if $audience ne $self->_spid->sp_entityid;
-    }
-    
-    if (defined $args{in_response_to}) {
-        my $in_response_to = $xpath->findvalue('//saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@InResponseTo')->value;
-        croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
-            $in_response_to, $args{in_response_to}
-            if $in_response_to ne $args{in_response_to};
-    }
     
     my $now = DateTime->now;
     
@@ -110,18 +112,11 @@ sub validate {
         $self->SubjectConfirmationData_NotOnOrAfter->iso8601, $now->iso8601
         if DateTime->compare($now, $self->SubjectConfirmationData_NotOnOrAfter) > -1;
     
-    {
-        # Check Destination against known ACS URLs
-        croak sprintf "Invalid Destination: '%s'", $self->Destination
-            if !grep { $_ eq $self->Destination } @{$self->_spid->sp_assertionconsumerservice};
-        
-        my $recipient  = $xpath->findvalue('//saml:SubjectConfirmationData/@Recipient')->value;
-        croak "Invalid SubjectConfirmationData/\@Recipient'"
-            if !grep { $_ eq $recipient } @{$self->_spid->sp_assertionconsumerservice};
-        
-        croak "Mismatch between Destination and SubjectConfirmationData/\@Recipient"
-            if $self->Destination ne $recipient;
-    }
+    croak "Invalid SubjectConfirmationData/\@Recipient'"
+        if !grep { $_ eq $self->Assertion_Recipient } @{$self->_spid->sp_assertionconsumerservice};
+    
+    croak "Mismatch between Destination and SubjectConfirmationData/\@Recipient"
+        if $self->Destination ne $self->Assertion_Recipient;
     
     return 1;
 }
