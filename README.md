@@ -43,8 +43,8 @@ On top of this module, plugins for web frameworks can be developed in order to a
 |verification of `Conditions/@NotBefore`|✓|
 |verification of `Conditions/@NotOnOrAfter`|✓|
 |verification of `Audience`|✓|
-|parsing of Response with no `Assertion` (authentication/query failure)| |
-|parsing of failure `StatusCode` (Requester/Responder)| |
+|parsing of Response with no `Assertion` (authentication/query failure)|✓|
+|parsing of failure `StatusCode` (Requester/Responder)|✓|
 |**Response/Assertion parsing for SSO (1.2.1, 1.2.2.2, 1.3.1):**||
 |parsing of `NameID`|✓|
 |parsing of `AuthnContextClassRef` (SPID level)|✓|

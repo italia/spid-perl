@@ -10,6 +10,7 @@ my %fields = qw(
     Assertion_Audience      //saml:Conditions/saml:AudienceRestriction/saml:Audience
     Assertion_InResponseTo  //saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@InResponseTo
     Assertion_Recipient     //saml:SubjectConfirmationData/@Recipient
+    StatusCode              /samlp:Response/samlp:Status/samlp:StatusCode/@Value
 );
 
 # generate accessors for all the above fields
@@ -70,59 +71,72 @@ sub validate {
         $self->InResponseTo, $args{in_response_to}
         if $self->InResponseTo ne $args{in_response_to};
     
-    croak sprintf "Response/Issuer (%s) does not match Assertion/Issuer (%s)",
-        $self->Issuer, $self->Assertion_Issuer
-        if $self->Issuer ne $self->Assertion_Issuer;
-    
-    # Check Destination against known ACS URLs
     croak sprintf "Invalid Destination: '%s'", $self->Destination
         if !grep { $_ eq $self->Destination } @{$self->_spid->sp_assertionconsumerservice};
     
-    croak sprintf "Invalid Audience: '%s' (expected: '%s')",
-        $self->Assertion_Audience, $self->_spid->sp_entityid
-        if $self->Assertion_Audience ne $self->_spid->sp_entityid;
+    if ($self->success) {
+        # We expect to have an <Assertion> element
+        
+        croak sprintf "Response/Issuer (%s) does not match Assertion/Issuer (%s)",
+            $self->Issuer, $self->Assertion_Issuer
+            if $self->Issuer ne $self->Assertion_Issuer;
     
-    croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
-        $self->Assertion_InResponseTo, $args{in_response_to}
-        if $self->Assertion_InResponseTo ne $args{in_response_to};
+        croak sprintf "Invalid Audience: '%s' (expected: '%s')",
+            $self->Assertion_Audience, $self->_spid->sp_entityid
+            if $self->Assertion_Audience ne $self->_spid->sp_entityid;
     
-    # this validates all the signatures in the given XML, and requires that at least one exists
-    my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
-    Mojo::XMLSig::verify($self->xml, $pubkey)
-        or croak "Signature verification failed";
+        croak sprintf "Invalid InResponseTo: '%s' (expected: '%s')",
+            $self->Assertion_InResponseTo, $args{in_response_to}
+            if $self->Assertion_InResponseTo ne $args{in_response_to};
     
-    # SPID regulations require that Assertion is signed, while Response can be not signed
-    croak "Response/Assertion is not signed"
-        if $xpath->findnodes('//saml:Assertion/dsig:Signature')->size == 0;
+        # this validates all the signatures in the given XML, and requires that at least one exists
+        my $pubkey = Crypt::OpenSSL::RSA->new_public_key($self->_idp->cert->pubkey);
+        Mojo::XMLSig::verify($self->xml, $pubkey)
+            or croak "Signature verification failed";
     
-    my $now = DateTime->now;
+        # SPID regulations require that Assertion is signed, while Response can be not signed
+        croak "Response/Assertion is not signed"
+            if $xpath->findnodes('//saml:Assertion/dsig:Signature')->size == 0;
     
-    # exact match is ok
-    croak sprintf "Invalid NotBefore: '%s' (now: '%s')",
-        $self->NotBefore->iso8601, $now->iso8601
-        if DateTime->compare($now, $self->NotBefore) < 0;
+        my $now = DateTime->now;
     
-    # exact match is *not* ok
-    croak sprintf "Invalid NotOnOrAfter: '%s' (now: '%s')",
-        $self->NotOnOrAfter->iso8601, $now->iso8601
-        if DateTime->compare($now, $self->NotOnOrAfter) > -1;
+        # exact match is ok
+        croak sprintf "Invalid NotBefore: '%s' (now: '%s')",
+            $self->NotBefore->iso8601, $now->iso8601
+            if DateTime->compare($now, $self->NotBefore) < 0;
     
-    # exact match is *not* ok
-    croak sprintf "Invalid SubjectConfirmationData/NotOnOrAfter: '%s' (now: '%s')",
-        $self->SubjectConfirmationData_NotOnOrAfter->iso8601, $now->iso8601
-        if DateTime->compare($now, $self->SubjectConfirmationData_NotOnOrAfter) > -1;
+        # exact match is *not* ok
+        croak sprintf "Invalid NotOnOrAfter: '%s' (now: '%s')",
+            $self->NotOnOrAfter->iso8601, $now->iso8601
+            if DateTime->compare($now, $self->NotOnOrAfter) > -1;
     
-    croak "Invalid SubjectConfirmationData/\@Recipient'"
-        if !grep { $_ eq $self->Assertion_Recipient } @{$self->_spid->sp_assertionconsumerservice};
+        # exact match is *not* ok
+        croak sprintf "Invalid SubjectConfirmationData/NotOnOrAfter: '%s' (now: '%s')",
+            $self->SubjectConfirmationData_NotOnOrAfter->iso8601, $now->iso8601
+            if DateTime->compare($now, $self->SubjectConfirmationData_NotOnOrAfter) > -1;
     
-    croak "Mismatch between Destination and SubjectConfirmationData/\@Recipient"
-        if $self->Destination ne $self->Assertion_Recipient;
+        croak "Invalid SubjectConfirmationData/\@Recipient'"
+            if !grep { $_ eq $self->Assertion_Recipient } @{$self->_spid->sp_assertionconsumerservice};
+    
+        croak "Mismatch between Destination and SubjectConfirmationData/\@Recipient"
+            if $self->Destination ne $self->Assertion_Recipient;
+    } else {
+        # Authentication failed, so we expect no <Assertion> element.
+    }
     
     return 1;
 }
 
+sub success {
+    my ($self) = @_;
+    
+    return $self->StatusCode eq 'urn:oasis:names:tc:SAML:2.0:status:Success';
+}
+
 sub spid_session {
     my ($self) = @_;
+    
+    return undef if !$self->success;
     
     return Net::SPID::Session->new(
         idp_id          => $self->Issuer,
@@ -193,6 +207,10 @@ This must be the ID of the AuthnRequest we sent, which you should store in the u
 
 =back
 
+=head2 success
+
+This method returns true if authentication succeeded (and thus we got an assertion from the Identity Provider). In case of failure, you can call the L<StatusCode> method for more details.
+
 =head2 spid_level
 
 This method returns the SPID level asserted by the Identity Provider, as an integer (1, 2 or 3). Note that this may not coincide with the level requested in the AuthnRequest.
@@ -204,5 +222,9 @@ This method returns a L<Net::SPID::Session> object populated with information fr
 =head2 attributes
 
 This method returns a hashref containing the attributes.
+
+=head2 StatusCode
+
+This method returns the SAML response StatusCode.
 
 =cut

@@ -105,19 +105,24 @@ post '/spid-sso' => sub {
     # being verified at a later time
     info "SPID Assertion: " . $assertion->xml;
     
-    # Login successful! Initialize our application session and store
-    # the SPID information for later retrieval.
-    # $assertion->spid_session is a Net::SPID::Session object which is a
-    # simple hashref thus it's easily serializable.
-    # TODO: this should be stored in a database instead of the current Dancer
-    # session, and it should be indexed by SPID SessionID so that we can delete
-    # it when we get a LogoutRequest from an IdP.
-    session 'spid_session' => $assertion->spid_session;
+    if ($assertion->success) {
+        # Login successful! Initialize our application session and store
+        # the SPID information for later retrieval.
+        # $assertion->spid_session is a Net::SPID::Session object which is a
+        # simple hashref thus it's easily serializable.
+        # TODO: this should be stored in a database instead of the current Dancer
+        # session, and it should be indexed by SPID SessionID so that we can delete
+        # it when we get a LogoutRequest from an IdP.
+        session 'spid_session' => $assertion->spid_session;
     
-    # TODO: handle SPID level upgrade:
-    # - does session ID remain the same? better assume it changes
+        # TODO: handle SPID level upgrade:
+        # - does session ID remain the same? better assume it changes
     
-    redirect '/';
+        redirect '/';
+    } else {
+        content_type 'text/plain';
+        return "Authentication Failed: " . $assertion->StatusCode;
+    }
 };
 
 # This endpoint initiates logout.
