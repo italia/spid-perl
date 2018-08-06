@@ -4,12 +4,12 @@ use Moo;
 extends 'Net::SPID::SAML::In::Base';
 
 my %fields = qw(
-    NameID                  //saml:Subject/saml:NameID
-    SessionIndex            //saml:AuthnStatement/@SessionIndex
+    NameID                  /samlp:Response/saml:Assertion/saml:Subject/saml:NameID
+    SessionIndex            /samlp:Response/saml:Assertion/saml:AuthnStatement/@SessionIndex
     Assertion_Issuer        /samlp:Response/saml:Assertion/saml:Issuer
-    Assertion_Audience      //saml:Conditions/saml:AudienceRestriction/saml:Audience
-    Assertion_InResponseTo  //saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@InResponseTo
-    Assertion_Recipient     //saml:SubjectConfirmationData/@Recipient
+    Assertion_Audience      /samlp:Response/saml:Assertion/saml:Conditions/saml:AudienceRestriction/saml:Audience
+    Assertion_InResponseTo  /samlp:Response/saml:Assertion/saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@InResponseTo
+    Assertion_Recipient     /samlp:Response/saml:Assertion/saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@Recipient
     StatusCode              /samlp:Response/samlp:Status/samlp:StatusCode/@Value
 );
 
@@ -22,21 +22,21 @@ foreach my $f (keys %fields) {
 
 has 'NotBefore' => (is => 'lazy', builder => sub {
     DateTime::Format::XSD->parse_datetime
-        ($_[0]->xpath->findvalue('//saml:Conditions/@NotBefore')->value)
+        ($_[0]->xpath->findvalue('/samlp:Response/saml:Assertion/saml:Conditions/@NotBefore')->value)
 });
 
 has 'NotOnOrAfter' => (is => 'lazy', builder => sub {
     DateTime::Format::XSD->parse_datetime
-        ($_[0]->xpath->findvalue('//saml:Conditions/@NotOnOrAfter')->value)
+        ($_[0]->xpath->findvalue('/samlp:Response/saml:Assertion/saml:Conditions/@NotOnOrAfter')->value)
 });
 
 has 'SubjectConfirmationData_NotOnOrAfter' => (is => 'lazy', builder => sub {
     DateTime::Format::XSD->parse_datetime
-        ($_[0]->xpath->findvalue('//saml:SubjectConfirmationData/@NotOnOrAfter')->value)
+        ($_[0]->xpath->findvalue('/samlp:Response/saml:Assertion/saml:Subject/saml:SubjectConfirmation/saml:SubjectConfirmationData/@NotOnOrAfter')->value)
 });
 
 has 'spid_level' => (is => 'lazy', builder => sub {
-    my $classref = $_[0]->xpath->findvalue('//saml:AuthnContextClassRef')->value
+    my $classref = $_[0]->xpath->findvalue('/samlp:Response/saml:Assertion/saml:AuthnStatement/saml:AuthnContext/saml:AuthnContextClassRef')->value
         or return undef;
     $classref =~ /SpidL(\d)$/ or return undef;
     return $1;
@@ -45,7 +45,7 @@ has 'spid_level' => (is => 'lazy', builder => sub {
 has 'attributes' => (is => 'lazy', builder => sub {
     return {
         map { $_->getAttribute('Name') => $_->findnodes("*[local-name()='AttributeValue']")->[0]->string_value }
-            $_[0]->xpath->findnodes("//saml:Assertion/saml:AttributeStatement/saml:Attribute"),
+            $_[0]->xpath->findnodes("/samlp:Response/saml:Assertion/saml:AttributeStatement/saml:Attribute"),
     }
 });
 
@@ -96,7 +96,7 @@ sub validate {
     
         # SPID regulations require that Assertion is signed, while Response can be not signed
         croak "Response/Assertion is not signed"
-            if $xpath->findnodes('//saml:Assertion/dsig:Signature')->size == 0;
+            if $xpath->findnodes('/samlp:Response/saml:Assertion/dsig:Signature')->size == 0;
     
         my $now = DateTime->now;
     
