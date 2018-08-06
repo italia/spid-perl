@@ -5,6 +5,7 @@ has 'idp_id'        => (is => 'ro', required => 1);
 has 'nameid'        => (is => 'ro', required => 1);
 has 'session_index' => (is => 'ro', required => 1);
 has 'assertion_xml' => (is => 'ro', required => 1);
+has 'level'         => (is => 'ro', required => 1);
 has 'attributes'    => (is => 'ro', default => sub { {} });
 
 1;
@@ -49,6 +50,10 @@ This method returns the session identifier as returned in the assertion.
 =head2 assertion_xml
 
 This method returns the raw XML of the assertion.
+
+=head2 level
+
+The SPID level authenticated by the Identity Provider. You may want to check this value as it might be equal or higher than the one you requested.
 
 =head2 attributes
 
