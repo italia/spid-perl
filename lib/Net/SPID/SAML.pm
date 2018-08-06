@@ -122,7 +122,7 @@ sub parse_logoutresponse {
     my $r = Net::SPID::SAML::In::LogoutResponse->new(
         _spid       => $self,
         base64      => $payload,
-        URL         => $url,
+        url         => $url,
     );
     
     # Validate response. This will throw an exception in case of failure.
@@ -137,7 +137,7 @@ sub parse_logoutrequest {
     my $r = Net::SPID::SAML::In::LogoutRequest->new(
         _spid       => $self,
         base64      => $payload,
-        URL         => $url,
+        url         => $url,
     );
     
     # Validate request. This will throw an exception in case of failure.
