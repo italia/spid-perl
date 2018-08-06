@@ -205,4 +205,24 @@ This can be either C<success>, C<partial>, C<requester> or C<responder> accordin
 
 Returns the signing certificate for this Identity Provider as a L<Crypt::OpenSSL::X509> object.
 
+=head2 xml
+
+Returns the XML representation of this Identity Provider's metadata.
+
+=head2 entityID
+
+Returns the entityID of this Identity Provider.
+
+=head2 sso_urls
+
+Hashref of SingleSignOnService bindings, whose keys are the binding methods (C<urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST> or C<urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect>) and values contain the URLs.
+
+=head2 sloreq_urls
+
+Hashref of SingleLogoutService bindings to be used for sending C<LogoutRequest> messages. Keys are the binding methods (C<urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST> or C<urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect>) and values contain the URLs.
+
+=head2 slores_urls
+
+Hashref of SingleLogoutService bindings to be used for sending C<LogoutResponse> messages. Keys are the binding methods (C<urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST> or C<urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect>) and values contain the URLs.
+
 =cut

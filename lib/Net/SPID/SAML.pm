@@ -319,6 +319,10 @@ This method generates the HTML markup for the SPID login button:
 
 The first argument can be a subroutine which will get passed the clicked IdP entityID and will need to return the full URL. As an alternative a string can be supplied, which will be handled as a format argument for a C<sprintf()> call.
 
+=head2 metadata
+
+This method returns the XML representation of metadata for this Service Provider.
+
 =head2 load_idp_metadata
 
 This method accepts the absolute or relative path to a directory and loads one or multiple Identity Providers by reading all its files having a C<.xml> suffix.
