@@ -31,7 +31,7 @@ sub validate {
     
     # if message is signed, validate that signature;
     # otherwise validate $args{URL}
-    $self->_validate_post_or_redirect($args{URL});
+    $self->_validate_post_or_redirect;
     
     croak "Missing 'in_response_to' argument for validate()"
         if !defined $args{in_response_to};

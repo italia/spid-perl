@@ -14,7 +14,7 @@ sub validate {
     
     # if message is signed, validate that signature;
     # otherwise validate $args{URL}
-    $self->_validate_post_or_redirect($args{URL});
+    $self->_validate_post_or_redirect;
     
     croak sprintf "Invalid Destination: '%s'", $self->Destination
         if !grep { $_ eq $self->Destination } keys %{$self->_spid->sp_singlelogoutservice};
