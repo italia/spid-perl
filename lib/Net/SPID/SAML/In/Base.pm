@@ -40,6 +40,7 @@ sub BUILDARGS {
     }
     
     if (exists $args{url}) {
+        print "URL: ", $args{url}, "\n\n";
         my $u = URI->new($args{url});
         if ($u->query_param('SAMLEncoding')) {
             croak "Invalid SAMLEncoding"
@@ -110,8 +111,16 @@ sub _validate_post_or_redirect {
             croak "Unsupported SigAlg: $SigAlg";
         }
         
-        my $sig = decode_base64($u->query_param_delete('Signature'));
-        $pubkey->verify($u->query, $sig)
+        # in order to verify the signature we need to concatenate arguments
+        # according to a predefined order (the request URI might be ordered
+        # in a different way)
+        my $u2 = URI->new;
+        $u2->query_param($_ => $u->query_param($_))
+            for grep defined $u->query_param($_),
+                qw(SAMLRequest SAMLResponse RelayState SigAlg);
+        
+        my $sig = decode_base64($u->query_param('Signature'));
+        $pubkey->verify($u2->query, $sig)
             or croak "Signature verification failed";
     
         return 1;
