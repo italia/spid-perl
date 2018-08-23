@@ -57,7 +57,7 @@ sub redirect_url {
     
     my $url = $self->_idp->slores_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'}
         or croak "No HTTP-POST binding is available for Single Logout";
-    return $self->SUPER::redirect_url($url, %args);
+    return $self->SUPER::redirect_url($url, param => 'SAMLResponse', %args);
 }
 
 sub post_form {
@@ -65,7 +65,7 @@ sub post_form {
     
     my $url = $self->_idp->slores_urls->{'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST'}
         or croak "No HTTP-POST binding is available for Single Logout";
-    return $self->SUPER::post_form($url, %args);
+    return $self->SUPER::post_form($url, param => 'SAMLResponse', %args);
 }
 
 1;
