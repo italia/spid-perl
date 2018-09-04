@@ -185,15 +185,6 @@ sub metadata {
         $x->endTag(); #ds:KeyInfo
         $x->endTag(); #KeyDescriptor
     }
-    $x->dataElement([$md, 'NameIDFormat'],
-        'urn:oasis:names:tc:SAML:2.0:nameid-format:transient');
-    
-    foreach my $acs_index (0..$#{$self->sp_assertionconsumerservice}) {
-        $x->emptyTag([$md, 'SingleSignOnService'],
-            Location => $self->sp_assertionconsumerservice->[$acs_index],
-            index => $acs_index,
-            isDefault => $acs_index ? 'false' : 'true');
-    }
     
     foreach my $url (keys %{$self->sp_singlelogoutservice}) {
         my $binding = 'urn:oasis:names:tc:SAML:2.0:bindings:'
@@ -201,6 +192,17 @@ sub metadata {
         $x->emptyTag([$md, 'SingleLogoutService'],
             Location => $url,
             Binding => $binding);
+    }
+    
+    $x->dataElement([$md, 'NameIDFormat'],
+        'urn:oasis:names:tc:SAML:2.0:nameid-format:transient');
+    
+    foreach my $acs_index (0..$#{$self->sp_assertionconsumerservice}) {
+        $x->emptyTag([$md, 'AssertionConsumerService'],
+            Binding => 'HTTP-POST',
+            Location => $self->sp_assertionconsumerservice->[$acs_index],
+            index => $acs_index,
+            isDefault => $acs_index ? 'false' : 'true');
     }
     
     foreach my $attr_index (0..$#{$self->sp_attributeconsumingservice}) {
