@@ -41,7 +41,8 @@ sub validate {
         if $self->InResponseTo ne $args{in_response_to};
     
     croak sprintf "Invalid Destination: '%s'", $self->Destination
-        if !grep { $_ eq $self->Destination } keys %{$self->_spid->sp_singlelogoutservice};
+        if !grep { $_ eq $self->Destination }
+            keys %{$self->_spid->sp_singlelogoutservice}, $self->_idp->entityID;
     
     return 1;
 }

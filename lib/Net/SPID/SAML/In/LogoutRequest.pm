@@ -17,7 +17,8 @@ sub validate {
     $self->_validate_post_or_redirect;
     
     croak sprintf "Invalid Destination: '%s'", $self->Destination
-        if !grep { $_ eq $self->Destination } keys %{$self->_spid->sp_singlelogoutservice};
+        if !grep { $_ eq $self->Destination }
+            keys %{$self->_spid->sp_singlelogoutservice}, $self->_idp->entityID;
     
     return 1;
 }

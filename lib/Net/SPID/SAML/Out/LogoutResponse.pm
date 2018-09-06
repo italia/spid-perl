@@ -19,8 +19,10 @@ sub xml {
         ID              => $self->ID,
         IssueInstant    => $self->IssueInstant->strftime('%FT%TZ'),
         Version         => '2.0',
-        Destination     => $self->_idp->slores_urls->{$args{binding}},
+        ### The following would be correct as of SAML rules, but SPID rules want the entityID:
+        ### Destination     => $self->_idp->slores_urls->{$args{binding}},
         InResponseTo    => $self->in_response_to,
+        Destination     => $self->_idp->entityID,
     };
     $x->startTag([$samlp, 'LogoutResponse'], %$req_attrs);
     

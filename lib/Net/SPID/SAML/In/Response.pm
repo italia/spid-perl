@@ -73,8 +73,11 @@ sub validate {
         $self->InResponseTo, $args{in_response_to}
         if $self->InResponseTo ne $args{in_response_to};
     
+    # As of current SPID spec, Destination might be populated with the entityID
+    # instead of the ACS URL
     croak sprintf "Invalid Destination: '%s'", $self->Destination
-        if !grep { $_ eq $self->Destination } @{$self->_spid->sp_assertionconsumerservice};
+        if !grep { $_ eq $self->Destination }
+            @{$self->_spid->sp_assertionconsumerservice}, $self->_idp->entityID;
     
     if ($self->success) {
         # We expect to have an <Assertion> element
