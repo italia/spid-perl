@@ -27,12 +27,19 @@ sub xml {
         Destination     => $self->_idp->entityID,
         ForceAuthn      => ($self->level > 1) ? 'true' : 'false',
     };
-    if (defined (my $acs_url = $self->acs_url // $self->_spid->sp_assertionconsumerservice->[0])) {
+    
+    my $acs_url   = $self->acs_url;
+    my $acs_index = $self->acs_index;
+    if (!defined $acs_url && !defined $acs_index) {
+        $acs_url = $self->_spid->sp_assertionconsumerservice->[0];
+    }
+    if (defined $acs_url) {
         $req_attrs->{AssertionConsumerServiceURL} = $acs_url;
         $req_attrs->{ProtocolBinding} = 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST';
-    } elsif (defined (my $acs_index = $self->acs_index // 0)) {
+    } elsif (defined $acs_index) {
         $req_attrs->{AssertionConsumerServiceIndex} = $acs_index;
     }
+    
     if (defined $self->attr_index) {
         $req_attrs->{AttributeConsumingServiceIndex} = $self->attr_index;
     }
