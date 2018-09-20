@@ -45,6 +45,10 @@ sub xml {
         UNSAFE          => 1,  # this enables raw()
     );
     
+    # Uncomment this to add the XML declaration to the outgoing SAML messages.
+    # XML declarations are supported but not mandatory in SPID SAML.
+    # $x->xmlDecl('UTF-8');
+    
     return ($x, $saml, $samlp);
 }
 
