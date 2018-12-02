@@ -41,7 +41,7 @@ sub new_from_xml {
     for my $slo ($xpath->findnodes('/md:EntityDescriptor/md:IDPSSODescriptor/md:SingleLogoutService')) {
         my $binding = $slo->getAttribute('Binding');
         $args{sloreq_urls}{$binding} = $slo->getAttribute('Location');
-        $args{slores_urls}{$binding} = $slo->getAttribute('Location') // $slo->getAttribute('ResponseLocation');
+        $args{slores_urls}{$binding} = $slo->getAttribute('ResponseLocation') // $slo->getAttribute('Location');
     }
     
     for my $certnode ($xpath->findnodes('/md:EntityDescriptor/md:IDPSSODescriptor/md:KeyDescriptor[@use="signing"]/ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')) {
