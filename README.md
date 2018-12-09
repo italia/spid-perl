@@ -105,7 +105,7 @@ On top of this module, plugins for web frameworks can be developed in order to a
 * [lib/Net/SPID.pm](lib/Net/SPID.pm) contains the source code of the Net::SPID module, which is just a wrapper around Net::SPID::SAML and Net::SPID::OpenID
 * [t/](t/) contains the test suite
 
-## Prerequisites & installation
+## Prerequisites & Installation
 
 This module should be compatible with Perl 5.10+.
 Just install it with cpanm and all dependencies will be retrieved automatically:
@@ -119,6 +119,22 @@ Or, if you want the latest version from git, use:
 ```
 cpanm https://github.com/italia/spid-perl/archive/master.tar.gz
 ```
+
+## Getting Started
+
+The [example/](example/) directory contains a demo web application. Just follow these steps in order to test it quickly:
+
+1. Run the demo application:
+   ```bash
+   cd example/
+   ./app.pl
+   ```
+
+2. Connect to [http://localhost:8000/metadata](http://localhost:8000/metadata) and grab the metadata of the demo Service Provider.
+
+3. Configure [spid-testenv2](https://github.com/italia/spid-testenv2) and load the above Service Provider metadata into it.
+
+4. Launch [http://localhost:8000](http://localhost:8000) and enjoy your SPID demo.
 
 ## Documentation
 
