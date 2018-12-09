@@ -3,6 +3,10 @@ use Moo;
 
 extends 'Net::SPID::SAML::In::Base';
 
+has 'SessionIndex' => (is => 'lazy', builder => sub {
+    $_[0]->xpath->findvalue('/samlp:LogoutRequest/samlp:SessionIndex')->value
+});
+
 use Carp qw(croak);
 
 sub validate {
